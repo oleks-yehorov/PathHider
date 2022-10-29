@@ -1,4 +1,6 @@
 #include "PathHider.h"
+#include "FileNameInformation.h"
+
 
 FLT_PREOP_CALLBACK_STATUS
 PathHiderEnumerateDirectory(
@@ -39,5 +41,21 @@ Return Value:
     PAGED_CODE();
 
     FLT_ASSERT(IoGetTopLevelIrp() == NULL);
+    
+    FilterFileNameInformation nameInfo(Data, FileNameOptions::Opened | FileNameOptions::QueryDefault);
+    if (nameInfo)
+    {
+        NTSTATUS Status = nameInfo.Parse();
+        if (NT_SUCCESS(Status))
+        {
+            KdPrint(("Enumerate directory for: %wZ\n", &nameInfo->Name));
+        }
+        else
+            ReturnValue = FLT_PREOP_COMPLETE;
+    }
+    else
+    {
+        ReturnValue = FLT_PREOP_COMPLETE;
+    }
     return ReturnValue;
 }

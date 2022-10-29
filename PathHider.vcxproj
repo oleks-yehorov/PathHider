@@ -35,9 +35,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="PathHiderEnumerateDirectory.c" />
     <ResourceCompile Include="PathHider.rc" />
-    <ClCompile Include="PathHider.c" />
     <Inf Include="PathHider.inf" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -206,7 +204,15 @@
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="FileNameInformation.h" />
+    <ClInclude Include="kstring.h" />
     <ClInclude Include="PathHider.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="FileNameInformation.cpp" />
+    <ClCompile Include="kstring.cpp" />
+    <ClCompile Include="PathHider.cpp" />
+    <ClCompile Include="PathHiderEnumerateDirectory.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

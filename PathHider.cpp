@@ -473,39 +473,13 @@ Return Value:
 
 --*/
 {
-	NTSTATUS status;
 
+	UNREFERENCED_PARAMETER(Data);
 	UNREFERENCED_PARAMETER(FltObjects);
 	UNREFERENCED_PARAMETER(CompletionContext);
 
 	PT_DBG_PRINT(PTDBG_TRACE_ROUTINES,
 		("PathHider!PathHiderPreOperation: Entered\n"));
-
-	//
-	//  See if this is an operation we would like the operation status
-	//  for.  If so request it.
-	//
-	//  NOTE: most filters do NOT need to do this.  You only need to make
-	//        this call if, for example, you need to know if the oplock was
-	//        actually granted.
-	//
-
-	if (PathHiderDoRequestOperationStatus(Data)) {
-
-		status = FltRequestOperationStatusCallback(Data,
-			PathHiderOperationStatusCallback,
-			(PVOID)(++OperationStatusCtx));
-		if (!NT_SUCCESS(status)) {
-
-			PT_DBG_PRINT(PTDBG_TRACE_OPERATION_STATUS,
-				("PathHider!PathHiderPreOperation: FltRequestOperationStatusCallback Failed, status=%08x\n",
-					status));
-		}
-	}
-
-	// This template code does not do anything with the callbackData, but
-	// rather returns FLT_PREOP_SUCCESS_WITH_CALLBACK.
-	// This passes the request down to the next miniFilter in the chain.
 
 	return FLT_PREOP_SUCCESS_WITH_CALLBACK;
 }
@@ -658,56 +632,6 @@ Return Value:
 	return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
 
-
-BOOLEAN
-PathHiderDoRequestOperationStatus(
-	_In_ PFLT_CALLBACK_DATA Data
-)
-/*++
-
-Routine Description:
-
-	This identifies those operations we want the operation status for.  These
-	are typically operations that return STATUS_PENDING as a normal completion
-	status.
-
-Arguments:
-
-Return Value:
-
-	TRUE - If we want the operation status
-	FALSE - If we don't
-
---*/
-{
-	PFLT_IO_PARAMETER_BLOCK iopb = Data->Iopb;
-
-	//
-	//  return boolean state based on which operations we are interested in
-	//
-
-	return (BOOLEAN)
-
-		//
-		//  Check for oplock operations
-		//
-
-		(((iopb->MajorFunction == IRP_MJ_FILE_SYSTEM_CONTROL) &&
-			((iopb->Parameters.FileSystemControl.Common.FsControlCode == FSCTL_REQUEST_FILTER_OPLOCK) ||
-				(iopb->Parameters.FileSystemControl.Common.FsControlCode == FSCTL_REQUEST_BATCH_OPLOCK) ||
-				(iopb->Parameters.FileSystemControl.Common.FsControlCode == FSCTL_REQUEST_OPLOCK_LEVEL_1) ||
-				(iopb->Parameters.FileSystemControl.Common.FsControlCode == FSCTL_REQUEST_OPLOCK_LEVEL_2)))
-
-			||
-
-			//
-			//    Check for directy change notification
-			//
-
-			((iopb->MajorFunction == IRP_MJ_DIRECTORY_CONTROL) &&
-				(iopb->MinorFunction == IRP_MN_NOTIFY_CHANGE_DIRECTORY))
-			);
-}
 
 FLT_PREOP_CALLBACK_STATUS
 PathHiderPreDirectoryControl(

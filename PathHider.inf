@@ -48,9 +48,7 @@ Dependencies     = "FltMgr"
 ServiceType      = 2                            ;SERVICE_FILE_SYSTEM_DRIVER
 StartType        = 3                            ;SERVICE_DEMAND_START
 ErrorControl     = 1                            ;SERVICE_ERROR_NORMAL
-; TODO - Change the Load Order Group value
-; LoadOrderGroup = "FSFilter Activity Monitor"
-LoadOrderGroup = "_TODO_Change_LoadOrderGroup_appropriately_"
+LoadOrderGroup = "FSFilter Activity Monitor"
 AddReg           = MiniFilter.AddRegistry
 
 ;
@@ -92,6 +90,5 @@ DiskId1                 = "PathHider Device Installation Disk"
 ;Instances specific information.
 DefaultInstance         = "PathHider Instance"
 Instance1.Name          = "PathHider Instance"
-; TODO - Change the altitude value, see https://msdn.microsoft.com/en-us/windows/hardware/drivers/ifs/load-order-groups-and-altitudes-for-minifilter-drivers
-Instance1.Altitude       = "_TODO_Change_Altitude_appropriately_"
+Instance1.Altitude       = "370121"
 Instance1.Flags         = 0x0              ; Allow all attachments
