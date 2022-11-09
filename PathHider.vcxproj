@@ -204,13 +204,13 @@
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Constants.h" />
     <ClInclude Include="FileNameInformation.h" />
-    <ClInclude Include="kstring.h" />
     <ClInclude Include="PathHider.h" />
+    <ClInclude Include="UnicodeStringGuard.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FileNameInformation.cpp" />
-    <ClCompile Include="kstring.cpp" />
     <ClCompile Include="PathHider.cpp" />
     <ClCompile Include="PathHiderEnumerateDirectory.cpp" />
   </ItemGroup>

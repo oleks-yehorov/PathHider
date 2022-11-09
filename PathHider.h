@@ -3,11 +3,14 @@
 
 #include <fltkernel.h>
 
-FLT_PREOP_CALLBACK_STATUS
-PathHiderEnumerateDirectory(
-    _Inout_ PFLT_CALLBACK_DATA Data,
-    _In_ PCFLT_RELATED_OBJECTS FltObjects,
-    _Flt_CompletionContext_Outptr_ PVOID* CompletionContext
+#include "Constants.h"
+
+extern "C" NTSTATUS ZwQueryInformationProcess(
+	_In_      HANDLE           ProcessHandle,
+	_In_      PROCESSINFOCLASS ProcessInformationClass,
+	_Out_     PVOID            ProcessInformation,
+	_In_      ULONG            ProcessInformationLength,
+	_Out_opt_ PULONG           ReturnLength
 );
 
 #endif //__PATH_HIDER_H__

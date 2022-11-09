@@ -17,8 +17,10 @@ Environment:
 #include <fltKernel.h>
 #include <dontuse.h>
 #include "PathHider.h"
+#include "UnicodeStringGuard.h"
 
 #pragma prefast(disable:__WARNING_ENCODE_MEMBER_FUNCTION_POINTER, "Not valid for kernel mode drivers")
+
 
 
 PFLT_FILTER gFilterHandle;
@@ -48,70 +50,10 @@ DriverEntry(
 	_In_ PUNICODE_STRING RegistryPath
 );
 
-NTSTATUS
-PathHiderInstanceSetup(
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_In_ FLT_INSTANCE_SETUP_FLAGS Flags,
-	_In_ DEVICE_TYPE VolumeDeviceType,
-	_In_ FLT_FILESYSTEM_TYPE VolumeFilesystemType
-);
-
-VOID
-PathHiderInstanceTeardownStart(
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_In_ FLT_INSTANCE_TEARDOWN_FLAGS Flags
-);
-
-VOID
-PathHiderInstanceTeardownComplete(
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_In_ FLT_INSTANCE_TEARDOWN_FLAGS Flags
-);
 
 NTSTATUS
 PathHiderUnload(
 	_In_ FLT_FILTER_UNLOAD_FLAGS Flags
-);
-
-NTSTATUS
-PathHiderInstanceQueryTeardown(
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_In_ FLT_INSTANCE_QUERY_TEARDOWN_FLAGS Flags
-);
-
-FLT_PREOP_CALLBACK_STATUS
-PathHiderPreOperation(
-	_Inout_ PFLT_CALLBACK_DATA Data,
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_Flt_CompletionContext_Outptr_ PVOID* CompletionContext
-);
-
-VOID
-PathHiderOperationStatusCallback(
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_In_ PFLT_IO_PARAMETER_BLOCK ParameterSnapshot,
-	_In_ NTSTATUS OperationStatus,
-	_In_ PVOID RequesterContext
-);
-
-FLT_POSTOP_CALLBACK_STATUS
-PathHiderPostOperation(
-	_Inout_ PFLT_CALLBACK_DATA Data,
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_In_opt_ PVOID CompletionContext,
-	_In_ FLT_POST_OPERATION_FLAGS Flags
-);
-
-FLT_PREOP_CALLBACK_STATUS
-PathHiderPreOperationNoPostOperation(
-	_Inout_ PFLT_CALLBACK_DATA Data,
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_Flt_CompletionContext_Outptr_ PVOID* CompletionContext
-);
-
-BOOLEAN
-PathHiderDoRequestOperationStatus(
-	_In_ PFLT_CALLBACK_DATA Data
 );
 
 FLT_PREOP_CALLBACK_STATUS
@@ -138,10 +80,8 @@ EXTERN_C_END
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, DriverEntry)
 #pragma alloc_text(PAGE, PathHiderUnload)
-#pragma alloc_text(PAGE, PathHiderInstanceQueryTeardown)
-#pragma alloc_text(PAGE, PathHiderInstanceSetup)
-#pragma alloc_text(PAGE, PathHiderInstanceTeardownStart)
-#pragma alloc_text(PAGE, PathHiderInstanceTeardownComplete)
+#pragma alloc_text(PAGE, PathHiderPreDirectoryControl)
+#pragma alloc_text(PAGE, PathHiderPostDirectoryControl)
 #endif
 
 //
@@ -150,7 +90,6 @@ EXTERN_C_END
 
 CONST FLT_OPERATION_REGISTRATION Callbacks[] =
 {
-
 	{ IRP_MJ_DIRECTORY_CONTROL, 0, PathHiderPreDirectoryControl, PathHiderPostDirectoryControl },
 	{ IRP_MJ_OPERATION_END }
 };
@@ -162,19 +101,19 @@ CONST FLT_OPERATION_REGISTRATION Callbacks[] =
 CONST FLT_REGISTRATION FilterRegistration =
 {
 
-	sizeof(FLT_REGISTRATION),         //  Size
+	sizeof(FLT_REGISTRATION),           //  Size
 	FLT_REGISTRATION_VERSION,           //  Version
 	0,                                  //  Flags
 
 	NULL,                               //  Context
 	Callbacks,                          //  Operation callbacks
 
-	PathHiderUnload,                           //  MiniFilterUnload
+	PathHiderUnload,                    //  MiniFilterUnload
 
-	PathHiderInstanceSetup,                    //  InstanceSetup
-	PathHiderInstanceQueryTeardown,            //  InstanceQueryTeardown
-	PathHiderInstanceTeardownStart,            //  InstanceTeardownStart
-	PathHiderInstanceTeardownComplete,         //  InstanceTeardownComplete
+	NULL,                               //  InstanceSetup
+	NULL,                               //  InstanceQueryTeardown
+	NULL,                               //  InstanceTeardownStart
+	NULL,                               //  InstanceTeardownComplete
 
 	NULL,                               //  GenerateFileName
 	NULL,                               //  GenerateDestinationFileName
@@ -182,192 +121,12 @@ CONST FLT_REGISTRATION FilterRegistration =
 
 };
 
-
-
-NTSTATUS
-PathHiderInstanceSetup(
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_In_ FLT_INSTANCE_SETUP_FLAGS Flags,
-	_In_ DEVICE_TYPE VolumeDeviceType,
-	_In_ FLT_FILESYSTEM_TYPE VolumeFilesystemType
-)
-/*++
-
-Routine Description:
-
-	This routine is called whenever a new instance is created on a volume. This
-	gives us a chance to decide if we need to attach to this volume or not.
-
-	If this routine is not defined in the registration structure, automatic
-	instances are always created.
-
-Arguments:
-
-	FltObjects - Pointer to the FLT_RELATED_OBJECTS data structure containing
-		opaque handles to this filter, instance and its associated volume.
-
-	Flags - Flags describing the reason for this attach request.
-
-Return Value:
-
-	STATUS_SUCCESS - attach
-	STATUS_FLT_DO_NOT_ATTACH - do not attach
-
---*/
-{
-	UNREFERENCED_PARAMETER(FltObjects);
-	UNREFERENCED_PARAMETER(Flags);
-	UNREFERENCED_PARAMETER(VolumeDeviceType);
-	UNREFERENCED_PARAMETER(VolumeFilesystemType);
-
-	PAGED_CODE();
-
-	PT_DBG_PRINT(PTDBG_TRACE_ROUTINES,
-		("PathHider!PathHiderInstanceSetup: Entered\n"));
-
-	return STATUS_SUCCESS;
-}
-
-
-NTSTATUS
-PathHiderInstanceQueryTeardown(
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_In_ FLT_INSTANCE_QUERY_TEARDOWN_FLAGS Flags
-)
-/*++
-
-Routine Description:
-
-	This is called when an instance is being manually deleted by a
-	call to FltDetachVolume or FilterDetach thereby giving us a
-	chance to fail that detach request.
-
-	If this routine is not defined in the registration structure, explicit
-	detach requests via FltDetachVolume or FilterDetach will always be
-	failed.
-
-Arguments:
-
-	FltObjects - Pointer to the FLT_RELATED_OBJECTS data structure containing
-		opaque handles to this filter, instance and its associated volume.
-
-	Flags - Indicating where this detach request came from.
-
-Return Value:
-
-	Returns the status of this operation.
-
---*/
-{
-	UNREFERENCED_PARAMETER(FltObjects);
-	UNREFERENCED_PARAMETER(Flags);
-
-	PAGED_CODE();
-
-	PT_DBG_PRINT(PTDBG_TRACE_ROUTINES,
-		("PathHider!PathHiderInstanceQueryTeardown: Entered\n"));
-
-	return STATUS_SUCCESS;
-}
-
-
-VOID
-PathHiderInstanceTeardownStart(
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_In_ FLT_INSTANCE_TEARDOWN_FLAGS Flags
-)
-/*++
-
-Routine Description:
-
-	This routine is called at the start of instance teardown.
-
-Arguments:
-
-	FltObjects - Pointer to the FLT_RELATED_OBJECTS data structure containing
-		opaque handles to this filter, instance and its associated volume.
-
-	Flags - Reason why this instance is being deleted.
-
-Return Value:
-
-	None.
-
---*/
-{
-	UNREFERENCED_PARAMETER(FltObjects);
-	UNREFERENCED_PARAMETER(Flags);
-
-	PAGED_CODE();
-
-	PT_DBG_PRINT(PTDBG_TRACE_ROUTINES,
-		("PathHider!PathHiderInstanceTeardownStart: Entered\n"));
-}
-
-
-VOID
-PathHiderInstanceTeardownComplete(
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_In_ FLT_INSTANCE_TEARDOWN_FLAGS Flags
-)
-/*++
-
-Routine Description:
-
-	This routine is called at the end of instance teardown.
-
-Arguments:
-
-	FltObjects - Pointer to the FLT_RELATED_OBJECTS data structure containing
-		opaque handles to this filter, instance and its associated volume.
-
-	Flags - Reason why this instance is being deleted.
-
-Return Value:
-
-	None.
-
---*/
-{
-	UNREFERENCED_PARAMETER(FltObjects);
-	UNREFERENCED_PARAMETER(Flags);
-
-	PAGED_CODE();
-
-	PT_DBG_PRINT(PTDBG_TRACE_ROUTINES,
-		("PathHider!PathHiderInstanceTeardownComplete: Entered\n"));
-}
-
-
 /*************************************************************************
 	MiniFilter initialization and unload routines.
 *************************************************************************/
 
 NTSTATUS
-DriverEntry(
-	_In_ PDRIVER_OBJECT DriverObject,
-	_In_ PUNICODE_STRING RegistryPath
-)
-/*++
-
-Routine Description:
-
-	This is the initialization routine for this miniFilter driver.  This
-	registers with FltMgr and initializes all global data structures.
-
-Arguments:
-
-	DriverObject - Pointer to driver object created by the system to
-		represent this driver.
-
-	RegistryPath - Unicode string identifying where the parameters for this
-		driver are located in the registry.
-
-Return Value:
-
-	Routine can return non success error codes.
-
---*/
+DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING RegistryPath)
 {
 	NTSTATUS status;
 
@@ -375,56 +134,25 @@ Return Value:
 
 	PT_DBG_PRINT(PTDBG_TRACE_ROUTINES,
 		("PathHider!DriverEntry: Entered\n"));
-
-	//
-	//  Register with FltMgr to tell it our callback routines
-	//
-
-	status = FltRegisterFilter(DriverObject,
-		&FilterRegistration,
-		&gFilterHandle);
+	status = FltRegisterFilter(DriverObject, &FilterRegistration, &gFilterHandle);
 
 	FLT_ASSERT(NT_SUCCESS(status));
 
-	if (NT_SUCCESS(status)) {
-
-		//
-		//  Start filtering i/o
-		//
-
+	if (NT_SUCCESS(status)) 
+	{
 		status = FltStartFiltering(gFilterHandle);
-
-		if (!NT_SUCCESS(status)) {
-
+		if (!NT_SUCCESS(status)) 
+		{
 			FltUnregisterFilter(gFilterHandle);
 		}
 	}
+
 
 	return status;
 }
 
 NTSTATUS
-PathHiderUnload(
-	_In_ FLT_FILTER_UNLOAD_FLAGS Flags
-)
-/*++
-
-Routine Description:
-
-	This is the unload routine for this miniFilter driver. This is called
-	when the minifilter is about to be unloaded. We can fail this unload
-	request if this is not a mandatory unload indicated by the Flags
-	parameter.
-
-Arguments:
-
-	Flags - Indicating if this is a mandatory unload.
-
-Return Value:
-
-	Returns STATUS_SUCCESS.
-
---*/
+PathHiderUnload(_In_ FLT_FILTER_UNLOAD_FLAGS Flags)
 {
 	UNREFERENCED_PARAMETER(Flags);
 
@@ -439,314 +167,4 @@ Return Value:
 }
 
 
-/*************************************************************************
-	MiniFilter callback routines.
-*************************************************************************/
-FLT_PREOP_CALLBACK_STATUS
-PathHiderPreOperation(
-	_Inout_ PFLT_CALLBACK_DATA Data,
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_Flt_CompletionContext_Outptr_ PVOID* CompletionContext
-)
-/*++
 
-Routine Description:
-
-	This routine is a pre-operation dispatch routine for this miniFilter.
-
-	This is non-pageable because it could be called on the paging path
-
-Arguments:
-
-	Data - Pointer to the filter callbackData that is passed to us.
-
-	FltObjects - Pointer to the FLT_RELATED_OBJECTS data structure containing
-		opaque handles to this filter, instance, its associated volume and
-		file object.
-
-	CompletionContext - The context for the completion routine for this
-		operation.
-
-Return Value:
-
-	The return value is the status of the operation.
-
---*/
-{
-
-	UNREFERENCED_PARAMETER(Data);
-	UNREFERENCED_PARAMETER(FltObjects);
-	UNREFERENCED_PARAMETER(CompletionContext);
-
-	PT_DBG_PRINT(PTDBG_TRACE_ROUTINES,
-		("PathHider!PathHiderPreOperation: Entered\n"));
-
-	return FLT_PREOP_SUCCESS_WITH_CALLBACK;
-}
-
-
-
-VOID
-PathHiderOperationStatusCallback(
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_In_ PFLT_IO_PARAMETER_BLOCK ParameterSnapshot,
-	_In_ NTSTATUS OperationStatus,
-	_In_ PVOID RequesterContext
-)
-/*++
-
-Routine Description:
-
-	This routine is called when the given operation returns from the call
-	to IoCallDriver.  This is useful for operations where STATUS_PENDING
-	means the operation was successfully queued.  This is useful for OpLocks
-	and directory change notification operations.
-
-	This callback is called in the context of the originating thread and will
-	never be called at DPC level.  The file object has been correctly
-	referenced so that you can access it.  It will be automatically
-	dereferenced upon return.
-
-	This is non-pageable because it could be called on the paging path
-
-Arguments:
-
-	FltObjects - Pointer to the FLT_RELATED_OBJECTS data structure containing
-		opaque handles to this filter, instance, its associated volume and
-		file object.
-
-	RequesterContext - The context for the completion routine for this
-		operation.
-
-	OperationStatus -
-
-Return Value:
-
-	The return value is the status of the operation.
-
---*/
-{
-	UNREFERENCED_PARAMETER(FltObjects);
-
-	PT_DBG_PRINT(PTDBG_TRACE_ROUTINES,
-		("PathHider!PathHiderOperationStatusCallback: Entered\n"));
-
-	PT_DBG_PRINT(PTDBG_TRACE_OPERATION_STATUS,
-		("PathHider!PathHiderOperationStatusCallback: Status=%08x ctx=%p IrpMj=%02x.%02x \"%s\"\n",
-			OperationStatus,
-			RequesterContext,
-			ParameterSnapshot->MajorFunction,
-			ParameterSnapshot->MinorFunction,
-			FltGetIrpName(ParameterSnapshot->MajorFunction)));
-}
-
-
-FLT_POSTOP_CALLBACK_STATUS
-PathHiderPostOperation(
-	_Inout_ PFLT_CALLBACK_DATA Data,
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_In_opt_ PVOID CompletionContext,
-	_In_ FLT_POST_OPERATION_FLAGS Flags
-)
-/*++
-
-Routine Description:
-
-	This routine is the post-operation completion routine for this
-	miniFilter.
-
-	This is non-pageable because it may be called at DPC level.
-
-Arguments:
-
-	Data - Pointer to the filter callbackData that is passed to us.
-
-	FltObjects - Pointer to the FLT_RELATED_OBJECTS data structure containing
-		opaque handles to this filter, instance, its associated volume and
-		file object.
-
-	CompletionContext - The completion context set in the pre-operation routine.
-
-	Flags - Denotes whether the completion is successful or is being drained.
-
-Return Value:
-
-	The return value is the status of the operation.
-
---*/
-{
-	UNREFERENCED_PARAMETER(Data);
-	UNREFERENCED_PARAMETER(FltObjects);
-	UNREFERENCED_PARAMETER(CompletionContext);
-	UNREFERENCED_PARAMETER(Flags);
-
-	PT_DBG_PRINT(PTDBG_TRACE_ROUTINES,
-		("PathHider!PathHiderPostOperation: Entered\n"));
-
-	return FLT_POSTOP_FINISHED_PROCESSING;
-}
-
-
-FLT_PREOP_CALLBACK_STATUS
-PathHiderPreOperationNoPostOperation(
-	_Inout_ PFLT_CALLBACK_DATA Data,
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_Flt_CompletionContext_Outptr_ PVOID* CompletionContext
-)
-/*++
-
-Routine Description:
-
-	This routine is a pre-operation dispatch routine for this miniFilter.
-
-	This is non-pageable because it could be called on the paging path
-
-Arguments:
-
-	Data - Pointer to the filter callbackData that is passed to us.
-
-	FltObjects - Pointer to the FLT_RELATED_OBJECTS data structure containing
-		opaque handles to this filter, instance, its associated volume and
-		file object.
-
-	CompletionContext - The context for the completion routine for this
-		operation.
-
-Return Value:
-
-	The return value is the status of the operation.
-
---*/
-{
-	UNREFERENCED_PARAMETER(Data);
-	UNREFERENCED_PARAMETER(FltObjects);
-	UNREFERENCED_PARAMETER(CompletionContext);
-
-	PT_DBG_PRINT(PTDBG_TRACE_ROUTINES,
-		("PathHider!PathHiderPreOperationNoPostOperation: Entered\n"));
-
-	// This template code does not do anything with the callbackData, but
-	// rather returns FLT_PREOP_SUCCESS_NO_CALLBACK.
-	// This passes the request down to the next miniFilter in the chain.
-
-	return FLT_PREOP_SUCCESS_NO_CALLBACK;
-}
-
-
-FLT_PREOP_CALLBACK_STATUS
-PathHiderPreDirectoryControl(
-	_Inout_ PFLT_CALLBACK_DATA Data,
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_Flt_CompletionContext_Outptr_ PVOID* CompletionContext
-)
-/*++
-
-Routine Description:
-
-	This callback is invoked when the user tries to enumerate a directory
-	or get change notifications.
-
-Arguments:
-
-	Data - Pointer to the filter CallbackData that is passed to us.
-
-	FltObjects - Pointer to the FLT_RELATED_OBJECTS data structure containing
-		opaque handles to this filter, instance, its associated volume and
-		file object.
-
-	CompletionContext - The context for the completion routine for this
-		operation.
-
-Return Value:
-
-	The return value is the Status of the operation.
-
---*/
-{
-	UNREFERENCED_PARAMETER(FltObjects);
-	UNREFERENCED_PARAMETER(CompletionContext);
-	FLT_PREOP_CALLBACK_STATUS Status;
-
-	PAGED_CODE();
-
-	switch (Data->Iopb->MinorFunction) {
-
-	case IRP_MN_QUERY_DIRECTORY:
-		Status = PathHiderEnumerateDirectory(Data, FltObjects, CompletionContext);
-		break;
-
-	default:
-		FLT_ASSERT(FALSE);
-		Status = FLT_PREOP_SUCCESS_NO_CALLBACK;
-
-	}
-
-	return Status;
-}
-
-FLT_POSTOP_CALLBACK_STATUS
-PathHiderPostDirectoryControl(
-	_Inout_ PFLT_CALLBACK_DATA Data,
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_In_ PVOID CompletionContext,
-	_In_ FLT_POST_OPERATION_FLAGS Flags
-)
-/*++
-
-Routine Description:
-
-	This callback is invoked after the user tries to enumerate a directory
-	or get change notifications.
-
-Arguments:
-
-	Data - Pointer to the filter CallbackData that is passed to us.
-
-	FltObjects - Pointer to the FLT_RELATED_OBJECTS data structure containing
-		opaque handles to this filter, instance, its associated volume and
-		file object.
-
-	CompletionContext - The context for the completion routine for this
-		operation.
-
-Return Value:
-
-	The return value is the Status of the operation.
-
---*/
-{
-	UNREFERENCED_PARAMETER(Flags);
-	UNREFERENCED_PARAMETER(CompletionContext);
-	UNREFERENCED_PARAMETER(FltObjects);
-	FLT_POSTOP_CALLBACK_STATUS Status;
-
-	//
-	//  Note this routine must be nonpaged.  It is called within completion
-	//  routines.
-	//
-
-	switch (Data->Iopb->MinorFunction) {
-
-	case IRP_MN_QUERY_DIRECTORY:
-
-		//
-		//  Currently we don't process post directory enumeration
-		//  requests.  We really should.
-		//
-
-		Status = FLT_POSTOP_FINISHED_PROCESSING;
-		break;
-
-		/*case IRP_MN_NOTIFY_CHANGE_DIRECTORY:
-
-			Status = NcPostNotifyDirectory(Data, FltObjects, CompletionContext, Flags);
-			break;*/
-
-	default:
-		FLT_ASSERT(FALSE);
-		Status = FLT_POSTOP_FINISHED_PROCESSING;
-
-	}
-
-	return Status;
-}
