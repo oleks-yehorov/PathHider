@@ -120,6 +120,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
@@ -206,13 +207,19 @@
   <ItemGroup>
     <ClInclude Include="Constants.h" />
     <ClInclude Include="FileNameInformation.h" />
+    <ClInclude Include="kstring.h" />
     <ClInclude Include="PathHider.h" />
     <ClInclude Include="UnicodeStringGuard.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FileNameInformation.cpp" />
+    <ClCompile Include="kstring.cpp" />
     <ClCompile Include="PathHider.cpp" />
+    <ClCompile Include="PathHiderCreateCleanup.cpp" />
     <ClCompile Include="PathHiderEnumerateDirectory.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".clang-format" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
