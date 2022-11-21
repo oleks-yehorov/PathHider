@@ -16,7 +16,7 @@ Environment:
 
 #include "PathHider.h"
 #include "UnicodeStringGuard.h"
-#include "kstring.h"
+#include "UnicodeString.h"
 #include <dontuse.h>
 #include <fltKernel.h>
 
@@ -188,11 +188,8 @@ NTSTATUS AddPathToHide(_In_ PUNICODE_STRING Path)
     // extract parent folder
     auto lastSeparator = wcsrchr(Path->Buffer, L'\\');
     auto folderPathLength = lastSeparator - Path->Buffer;
-    kstring folderPath(Path->Buffer, static_cast<ULONG>(folderPathLength));
-    UNICODE_STRING folderPathUnicodeStr;
-    folderPath.GetUnicodeString(&folderPathUnicodeStr);
-
-    kstring fileName(lastSeparator + 1);
+    KUtils::UnicodeString folderPath(Path->Buffer, static_cast<USHORT>(folderPathLength*sizeof(WCHAR)));
+    KUtils::UnicodeString fileName(lastSeparator + 1);
 
     // enumerate list - looking for the parent folder
     PLIST_ENTRY temp = &gFolderDataHead;
@@ -201,7 +198,8 @@ NTSTATUS AddPathToHide(_In_ PUNICODE_STRING Path)
     {
         temp = temp->Flink;
         auto curFolderData = CONTAINING_RECORD(temp, FolderData, m_listEntry);
-        if (RtlEqualUnicodeString(&curFolderData->m_path, &folderPathUnicodeStr,
+        if (RtlEqualUnicodeString(&curFolderData->m_path,
+                                  &folderPath.GetUnicodeString(),
                                   TRUE))
         {
             folderData = curFolderData;
@@ -220,13 +218,14 @@ NTSTATUS AddPathToHide(_In_ PUNICODE_STRING Path)
         InitializeListHead(&folderData->m_fileListHead);
         //
         folderData->m_path.Buffer = static_cast<PWCH>(ExAllocatePoolWithTag(
-            PagedPool, folderPathUnicodeStr.MaximumLength * sizeof(WCHAR),
+            PagedPool, folderPath.MaxByteLength(),
             DRIVER_TAG));
         if (!folderData->m_path.Buffer)
             return STATUS_INSUFFICIENT_RESOURCES;
         // folderData->m_path.Length = 0;
-        folderData->m_path.MaximumLength = folderPathUnicodeStr.MaximumLength;
-        RtlCopyUnicodeString(&folderData->m_path, &folderPathUnicodeStr);
+        folderData->m_path.MaximumLength = folderPath.MaxCharLength();
+        RtlCopyUnicodeString(&folderData->m_path,
+                             &folderPath.GetUnicodeString());
     }
     // insert file name to this folder entry
     FileList* newFileEntity = static_cast<FileList*>(
@@ -236,12 +235,9 @@ NTSTATUS AddPathToHide(_In_ PUNICODE_STRING Path)
     InsertHeadList(&folderData->m_fileListHead, &(newFileEntity->m_listEntry));
 
     // file name
-    UNICODE_STRING fileUnicodeStr;
-    fileName.GetUnicodeString(&fileUnicodeStr);
-    newFileEntity->m_name.Buffer = static_cast<PWCH>(ExAllocatePoolWithTag(
-        PagedPool, (fileUnicodeStr.MaximumLength) * sizeof(WCHAR), DRIVER_TAG));
-    newFileEntity->m_name.MaximumLength = fileUnicodeStr.MaximumLength;
-    RtlCopyUnicodeString(&newFileEntity->m_name, &fileUnicodeStr);
+    newFileEntity->m_name.Buffer = static_cast<PWCH>(ExAllocatePoolWithTag(PagedPool, fileName.MaxByteLength(), DRIVER_TAG));
+    newFileEntity->m_name.MaximumLength = fileName.MaxCharLength();
+    RtlCopyUnicodeString(&newFileEntity->m_name, &fileName.GetUnicodeString());
     return STATUS_SUCCESS;
 }
 
