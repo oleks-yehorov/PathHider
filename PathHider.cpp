@@ -15,14 +15,12 @@ Environment:
 --*/
 
 #include "PathHider.h"
-#include "UnicodeStringGuard.h"
 #include "UnicodeString.h"
+#include "UnicodeStringGuard.h"
 #include <dontuse.h>
 #include <fltKernel.h>
 
-#pragma prefast(disable                                                        \
-                : __WARNING_ENCODE_MEMBER_FUNCTION_POINTER,                    \
-                  "Not valid for kernel mode drivers")
+#pragma prefast(disable : __WARNING_ENCODE_MEMBER_FUNCTION_POINTER, "Not valid for kernel mode drivers")
 
 PFLT_FILTER gFilterHandle;
 ULONG_PTR OperationStatusCtx = 1;
@@ -32,8 +30,7 @@ ULONG_PTR OperationStatusCtx = 1;
 
 ULONG gTraceFlags = 0;
 
-#define PT_DBG_PRINT(_dbgLevel, _string)                                       \
-    (FlagOn(gTraceFlags, (_dbgLevel)) ? DbgPrint _string : ((int)0))
+#define PT_DBG_PRINT(_dbgLevel, _string) (FlagOn(gTraceFlags, (_dbgLevel)) ? DbgPrint _string : ((int)0))
 
 LIST_ENTRY gFolderDataHead;
 /*************************************************************************
@@ -44,8 +41,7 @@ EXTERN_C_START
 
 DRIVER_INITIALIZE DriverEntry;
 NTSTATUS
-DriverEntry(_In_ PDRIVER_OBJECT DriverObject,
-            _In_ PUNICODE_STRING RegistryPath);
+DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING RegistryPath);
 
 NTSTATUS
 PathHiderUnload(_In_ FLT_FILTER_UNLOAD_FLAGS Flags);
@@ -57,10 +53,9 @@ PathHiderPostCreate(_Inout_ PFLT_CALLBACK_DATA Data,
                     _In_ FLT_POST_OPERATION_FLAGS Flags);
 
 FLT_PREOP_CALLBACK_STATUS
-PathHiderPreDirectoryControl(
-    _Inout_ PFLT_CALLBACK_DATA Data,
-    _In_ PCFLT_RELATED_OBJECTS FltObjects,
-    _Flt_CompletionContext_Outptr_ PVOID* CompletionContext);
+PathHiderPreDirectoryControl(_Inout_ PFLT_CALLBACK_DATA Data,
+                             _In_ PCFLT_RELATED_OBJECTS FltObjects,
+                             _Flt_CompletionContext_Outptr_ PVOID* CompletionContext);
 
 FLT_POSTOP_CALLBACK_STATUS
 PathHiderPostDirectoryControl(_Inout_ PFLT_CALLBACK_DATA Data,
@@ -98,13 +93,11 @@ EXTERN_C_END
 //  operation registration
 //
 
-CONST FLT_OPERATION_REGISTRATION Callbacks[] = {
-    { IRP_MJ_CREATE, 0, nullptr, PathHiderPostCreate },
-    { IRP_MJ_DIRECTORY_CONTROL, 0, PathHiderPreDirectoryControl,
-      PathHiderPostDirectoryControl },
-    { IRP_MJ_CLEANUP, 0, nullptr, PathHiderPostCleanup },
-    { IRP_MJ_OPERATION_END }
-};
+CONST FLT_OPERATION_REGISTRATION Callbacks[] = { { IRP_MJ_CREATE, 0, nullptr, PathHiderPostCreate },
+                                                 { IRP_MJ_DIRECTORY_CONTROL, 0, PathHiderPreDirectoryControl,
+                                                   PathHiderPostDirectoryControl },
+                                                 { IRP_MJ_CLEANUP, 0, nullptr, PathHiderPostCleanup },
+                                                 { IRP_MJ_OPERATION_END } };
 
 //
 //  This defines what we want to filter with FltMgr
@@ -149,8 +142,7 @@ DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING RegistryPath)
     if (!NT_SUCCESS(status))
         return status;
 
-    status =
-        FltRegisterFilter(DriverObject, &FilterRegistration, &gFilterHandle);
+    status = FltRegisterFilter(DriverObject, &FilterRegistration, &gFilterHandle);
 
     FLT_ASSERT(NT_SUCCESS(status));
 
@@ -172,8 +164,7 @@ PathHiderUnload(_In_ FLT_FILTER_UNLOAD_FLAGS Flags)
 
     PAGED_CODE();
 
-    PT_DBG_PRINT(PTDBG_TRACE_ROUTINES,
-                 ("PathHider!PathHiderUnload: Entered\n"));
+    PT_DBG_PRINT(PTDBG_TRACE_ROUTINES, ("PathHider!PathHiderUnload: Entered\n"));
 
     FltUnregisterFilter(gFilterHandle);
 
@@ -188,7 +179,7 @@ NTSTATUS AddPathToHide(_In_ PUNICODE_STRING Path)
     // extract parent folder
     auto lastSeparator = wcsrchr(Path->Buffer, L'\\');
     auto folderPathLength = lastSeparator - Path->Buffer;
-    KUtils::UnicodeString folderPath(Path->Buffer, static_cast<USHORT>(folderPathLength*sizeof(WCHAR)));
+    KUtils::UnicodeString folderPath(Path->Buffer, static_cast<USHORT>(folderPathLength * sizeof(WCHAR)));
     KUtils::UnicodeString fileName(lastSeparator + 1);
 
     // enumerate list - looking for the parent folder
@@ -198,9 +189,7 @@ NTSTATUS AddPathToHide(_In_ PUNICODE_STRING Path)
     {
         temp = temp->Flink;
         auto curFolderData = CONTAINING_RECORD(temp, FolderData, m_listEntry);
-        if (RtlEqualUnicodeString(&curFolderData->m_path,
-                                  &folderPath.GetUnicodeString(),
-                                  TRUE))
+        if (RtlEqualUnicodeString(&curFolderData->m_path, &folderPath.GetUnicodeString(), TRUE))
         {
             folderData = curFolderData;
             break;
@@ -209,27 +198,22 @@ NTSTATUS AddPathToHide(_In_ PUNICODE_STRING Path)
     // parent folder does not exist - add new foder entry
     if (!folderData)
     {
-        folderData = static_cast<FolderData*>(
-            ExAllocatePoolWithTag(PagedPool, sizeof(FolderData), DRIVER_TAG));
+        folderData = static_cast<FolderData*>(ExAllocatePoolWithTag(PagedPool, sizeof(FolderData), DRIVER_TAG));
         if (!folderData)
             return STATUS_INSUFFICIENT_RESOURCES;
 
         InsertHeadList(&gFolderDataHead, &(folderData->m_listEntry));
         InitializeListHead(&folderData->m_fileListHead);
         //
-        folderData->m_path.Buffer = static_cast<PWCH>(ExAllocatePoolWithTag(
-            PagedPool, folderPath.MaxByteLength(),
-            DRIVER_TAG));
+        folderData->m_path.Buffer = static_cast<PWCH>(ExAllocatePoolWithTag(PagedPool, folderPath.MaxByteLength(), DRIVER_TAG));
         if (!folderData->m_path.Buffer)
             return STATUS_INSUFFICIENT_RESOURCES;
         // folderData->m_path.Length = 0;
         folderData->m_path.MaximumLength = folderPath.MaxCharLength();
-        RtlCopyUnicodeString(&folderData->m_path,
-                             &folderPath.GetUnicodeString());
+        RtlCopyUnicodeString(&folderData->m_path, &folderPath.GetUnicodeString());
     }
     // insert file name to this folder entry
-    FileList* newFileEntity = static_cast<FileList*>(
-        ExAllocatePoolWithTag(PagedPool, sizeof(FileList), DRIVER_TAG));
+    FileList* newFileEntity = static_cast<FileList*>(ExAllocatePoolWithTag(PagedPool, sizeof(FileList), DRIVER_TAG));
     if (!newFileEntity)
         return STATUS_INSUFFICIENT_RESOURCES;
     InsertHeadList(&folderData->m_fileListHead, &(newFileEntity->m_listEntry));
@@ -259,15 +243,13 @@ NTSTATUS Init()
         return status;
 
     UNICODE_STRING path3;
-    RtlInitUnicodeString(&path3,
-                         L"\\Device\\HarddiskVolume1\\test\\test\\2.txt");
+    RtlInitUnicodeString(&path3, L"\\Device\\HarddiskVolume1\\test\\test\\2.txt");
     status = AddPathToHide(&path3);
     if (!NT_SUCCESS(status))
         return status;
 
     UNICODE_STRING path4;
-    RtlInitUnicodeString(&path4,
-                         L"\\Device\\HarddiskVolume1\\test\\test\\0.txt");
+    RtlInitUnicodeString(&path4, L"\\Device\\HarddiskVolume1\\test\\test\\0.txt");
     status = AddPathToHide(&path4);
     if (!NT_SUCCESS(status))
         return status;
@@ -281,8 +263,7 @@ void ShutDown()
     while (&gFolderDataHead != tempFolder)
     {
         FolderData* curFolderData = reinterpret_cast<FolderData*>(tempFolder);
-        PLIST_ENTRY tempFileList =
-            RemoveHeadList(&curFolderData->m_fileListHead);
+        PLIST_ENTRY tempFileList = RemoveHeadList(&curFolderData->m_fileListHead);
         while (&curFolderData->m_fileListHead != tempFileList)
         {
             FileList* curFileData = reinterpret_cast<FileList*>(tempFileList);

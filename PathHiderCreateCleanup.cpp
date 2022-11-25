@@ -34,7 +34,7 @@ bool FolderContainsFilesToHide(PFLT_CALLBACK_DATA Data,
     auto status = info.Parse();
     if (!NT_SUCCESS(status))
     {
-        // TODO - error message here
+        KdPrint(("Failed to parse file name info (0x%08X)\n", status));
         return false;
     }
     KdPrint(("Folder path: %wZ\n", &info->Name));
@@ -47,10 +47,10 @@ bool FolderContainsFilesToHide(PFLT_CALLBACK_DATA Data,
                                     reinterpret_cast<PFLT_CONTEXT*>(&context));
         if (!NT_SUCCESS(status))
         {
-            // TODO - error message here
+            KdPrint(("Failed to allocate context (0x%08X)\n", status));
             return false;
         }
-        // RtlZeroMemory(context, sizeof(FolderContext));
+
         context->m_fileListHead = &folderData->m_fileListHead;
         status =
             FltSetFileContext(FltObjects->Instance, FltObjects->FileObject,
@@ -94,8 +94,19 @@ PathHiderPostCreate(PFLT_CALLBACK_DATA Data,
         //a new file - skip
         return FLT_POSTOP_FINISHED_PROCESSING;
     }
-    FolderContainsFilesToHide(Data, FltObjects);
-
+    
+    FILE_BASIC_INFORMATION info;
+    auto status = FltQueryInformationFile(FltObjects->Instance, FltObjects->FileObject, &info, sizeof(info), FileBasicInformation, nullptr);
+    if (!NT_SUCCESS(status))
+    {
+        KdPrint(("Failed to get file info (0x%08X)\n", status));
+        return FLT_POSTOP_FINISHED_PROCESSING;
+    }
+    // is it folder?
+    if (info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+    {
+        FolderContainsFilesToHide(Data, FltObjects);
+    }
     return FLT_POSTOP_FINISHED_PROCESSING;
 }
 
