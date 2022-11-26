@@ -14,7 +14,7 @@ FolderData* GetFolderDataByFolderPath(PUNICODE_STRING FolderPath)
     {
         temp = temp->Flink;
         auto curFolderData = CONTAINING_RECORD(temp, FolderData, m_listEntry);
-        if (RtlEqualUnicodeString(&curFolderData->m_path, FolderPath, TRUE))
+        if (RtlEqualUnicodeString(&curFolderData->m_path.GetUnicodeString(), FolderPath, TRUE))
         {
             retVal = curFolderData;
             break;
@@ -50,8 +50,8 @@ bool FolderContainsFilesToHide(PFLT_CALLBACK_DATA Data,
             KdPrint(("Failed to allocate context (0x%08X)\n", status));
             return false;
         }
-
-        context->m_fileListHead = &folderData->m_fileListHead;
+        RtlZeroMemory(context, sizeof(FolderContext));
+        context->m_fileListHead = intrusive_ptr<FileList>(folderData->m_fileListHead);
         status =
             FltSetFileContext(FltObjects->Instance, FltObjects->FileObject,
                               FLT_SET_CONTEXT_KEEP_IF_EXISTS, context,
@@ -89,7 +89,7 @@ PathHiderPostCreate(PFLT_CALLBACK_DATA Data,
     {
             return FLT_POSTOP_FINISHED_PROCESSING;
     }*/
-    if (Data->IoStatus.Information == FILE_DOES_NOT_EXIST)
+    if (Data->IoStatus.Information == FILE_DOES_NOT_EXIST || Data->IoStatus.Information == FILE_SUPERSEDED)
     {
         //a new file - skip
         return FLT_POSTOP_FINISHED_PROCESSING;
@@ -133,6 +133,7 @@ PathHiderPostCleanup(_Inout_ PFLT_CALLBACK_DATA Data,
         KdPrint(("Failed to get file context (0x%08X)\n", status));
         return FLT_POSTOP_FINISHED_PROCESSING;
     }
+    context->m_fileListHead = nullptr;
     FltReleaseContext(context);
     FltDeleteContext(context);
     return FLT_POSTOP_FINISHED_PROCESSING;

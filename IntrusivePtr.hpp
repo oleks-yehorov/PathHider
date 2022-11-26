@@ -1,9 +1,8 @@
-#ifndef _INTRUSIVE_PTR_HPP_INCLUDED
-#define _INTRUSIVE_PTR_HPP_INCLUDED
+#pragma once
 
-
-#include "functional"           // for std::less
-
+#include "Constants.h"
+#include "Memory.h"
+#include <fltkernel.h>
 
 template<class T> class intrusive_ptr
 {
@@ -117,7 +116,7 @@ template<class T> inline bool operator!=(T * a, intrusive_ptr<T> const & b)
 
 template<class T> inline bool operator<(intrusive_ptr<T> const & a, intrusive_ptr<T> const & b)
 {
-    return std::less<T *>()(a.get(), b.get());
+    return a.get() < b.get();
 }
 
 template<class T> void swap(intrusive_ptr<T> & lhs, intrusive_ptr<T> & rhs)
@@ -145,10 +144,25 @@ template<class T, class U> intrusive_ptr<T> dynamic_pointer_cast(intrusive_ptr<U
     return dynamic_cast<T *>(p.get());
 }
 
+class RefCountedBase
+{
+  public:
+    RefCountedBase() : m_refCount(0) {}
+    virtual ~RefCountedBase() {}
+    long volatile m_refCount;
+};
 
+template <class T> inline void intrusive_ptr_add_ref(T* pointer) { InterlockedIncrement((PLONG)&pointer->m_refCount); }
 
-#endif  // #ifndef 
-
+template <class T> inline void intrusive_ptr_release(T* pointer)
+{
+    if (InterlockedDecrement((PLONG)&pointer->m_refCount) == 0)
+    {
+        //pointer->~T();
+        //ExFreePoolWithTag(pointer, DRIVER_TAG);
+        delete pointer;
+    }
+}
 
 
 

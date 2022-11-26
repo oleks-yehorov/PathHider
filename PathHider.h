@@ -3,7 +3,10 @@
 
 #include <fltkernel.h>
 
+#include "IntrusivePtr.hpp"
+#include "UnicodeString.h"
 #include "Constants.h"
+#include "Memory.h"
 
 EXTERN_C_START
 NTSTATUS
@@ -13,22 +16,24 @@ ZwQueryInformationProcess(_In_ HANDLE ProcessHandle,
                           _In_ ULONG ProcessInformationLength,
                           _Out_opt_ PULONG ReturnLength);
 
+struct FileList : public RefCountedBase
+{
+    // LIST_ENTRY m_listEntry;
+    intrusive_ptr<FileList> m_next;
+    KUtils::UnicodeString m_name;
+};
+
 struct FolderData
 {
     LIST_ENTRY m_listEntry;
-    UNICODE_STRING m_path;
-    LIST_ENTRY m_fileListHead;
-};
-
-struct FileList
-{
-    LIST_ENTRY m_listEntry;
-    UNICODE_STRING m_name;
+    KUtils::UnicodeString m_path;
+    //LIST_ENTRY m_fileListHead;
+    intrusive_ptr<FileList> m_fileListHead;
 };
 
 struct FolderContext
 {
-    LIST_ENTRY* m_fileListHead;
+    intrusive_ptr<FileList> m_fileListHead;
 };
 
 const FLT_CONTEXT_REGISTRATION ContextRegistration[] = {

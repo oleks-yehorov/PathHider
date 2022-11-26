@@ -1,4 +1,4 @@
-// filter(KUtils)
+// ProjectFilter(KUtils)
 #pragma once
 
 #include <ntddk.h>
@@ -260,22 +260,22 @@ namespace KUtils
 
     inline USHORT SimpleUString::ByteLength() const
     { 
-        return static_cast<USHORT>(m_Str.Length * sizeof(WCHAR));
+        return m_Str.Length;
     }
 
     inline USHORT SimpleUString::MaxByteLength() const
     {
-        return static_cast<USHORT>(m_Str.MaximumLength * sizeof(WCHAR));
+        return m_Str.MaximumLength;
     }
 
     inline USHORT SimpleUString::CharLength() const
     {
-        return m_Str.Length;
+        return m_Str.Length/sizeof(WCHAR);
     }
 
     inline USHORT SimpleUString::MaxCharLength() const
-    {
-        return m_Str.MaximumLength;
+    { 
+        return m_Str.MaximumLength / sizeof(WCHAR);
     }
 
     inline PWCHAR SimpleUString::Buffer() { return m_Str.Buffer; }

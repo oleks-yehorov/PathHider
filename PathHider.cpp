@@ -72,7 +72,7 @@ PathHiderPostCleanup(_Inout_ PFLT_CALLBACK_DATA Data,
 // folder list
 NTSTATUS Init();
 void ShutDown();
-NTSTATUS AddPathToHide(_In_ PUNICODE_STRING Path);
+NTSTATUS AddPathToHide(const KUtils::UnicodeString& Path, const KUtils::UnicodeString& Name);
 
 EXTERN_C_END
 
@@ -172,15 +172,10 @@ PathHiderUnload(_In_ FLT_FILTER_UNLOAD_FLAGS Flags)
     return STATUS_SUCCESS;
 }
 
-NTSTATUS AddPathToHide(_In_ PUNICODE_STRING Path)
+NTSTATUS AddPathToHide(const KUtils::UnicodeString& Path, const KUtils::UnicodeString& Name)
 {
-    if (Path->Length <= 0)
+    if (Path.IsEmpty() || Name.IsEmpty())
         return STATUS_INVALID_PARAMETER;
-    // extract parent folder
-    auto lastSeparator = wcsrchr(Path->Buffer, L'\\');
-    auto folderPathLength = lastSeparator - Path->Buffer;
-    KUtils::UnicodeString folderPath(Path->Buffer, static_cast<USHORT>(folderPathLength * sizeof(WCHAR)));
-    KUtils::UnicodeString fileName(lastSeparator + 1);
 
     // enumerate list - looking for the parent folder
     PLIST_ENTRY temp = &gFolderDataHead;
@@ -189,7 +184,7 @@ NTSTATUS AddPathToHide(_In_ PUNICODE_STRING Path)
     {
         temp = temp->Flink;
         auto curFolderData = CONTAINING_RECORD(temp, FolderData, m_listEntry);
-        if (RtlEqualUnicodeString(&curFolderData->m_path, &folderPath.GetUnicodeString(), TRUE))
+        if (curFolderData->m_path == Path)
         {
             folderData = curFolderData;
             break;
@@ -202,26 +197,17 @@ NTSTATUS AddPathToHide(_In_ PUNICODE_STRING Path)
         if (!folderData)
             return STATUS_INSUFFICIENT_RESOURCES;
 
+        RtlZeroMemory(folderData, sizeof(FolderData));
         InsertHeadList(&gFolderDataHead, &(folderData->m_listEntry));
-        InitializeListHead(&folderData->m_fileListHead);
         //
-        folderData->m_path.Buffer = static_cast<PWCH>(ExAllocatePoolWithTag(PagedPool, folderPath.MaxByteLength(), DRIVER_TAG));
-        if (!folderData->m_path.Buffer)
-            return STATUS_INSUFFICIENT_RESOURCES;
-        // folderData->m_path.Length = 0;
-        folderData->m_path.MaximumLength = folderPath.MaxCharLength();
-        RtlCopyUnicodeString(&folderData->m_path, &folderPath.GetUnicodeString());
+        folderData->m_path = Path;
     }
     // insert file name to this folder entry
-    FileList* newFileEntity = static_cast<FileList*>(ExAllocatePoolWithTag(PagedPool, sizeof(FileList), DRIVER_TAG));
-    if (!newFileEntity)
-        return STATUS_INSUFFICIENT_RESOURCES;
-    InsertHeadList(&folderData->m_fileListHead, &(newFileEntity->m_listEntry));
+    intrusive_ptr<FileList> fileEntry = new FileList();
+    fileEntry->m_name = Name;
+    fileEntry->m_next = intrusive_ptr<FileList>(folderData->m_fileListHead);
+    folderData->m_fileListHead = intrusive_ptr<FileList>(fileEntry);
 
-    // file name
-    newFileEntity->m_name.Buffer = static_cast<PWCH>(ExAllocatePoolWithTag(PagedPool, fileName.MaxByteLength(), DRIVER_TAG));
-    newFileEntity->m_name.MaximumLength = fileName.MaxCharLength();
-    RtlCopyUnicodeString(&newFileEntity->m_name, &fileName.GetUnicodeString());
     return STATUS_SUCCESS;
 }
 
@@ -230,27 +216,35 @@ NTSTATUS Init()
     RtlZeroMemory(&gFolderDataHead, sizeof(gFolderDataHead));
     InitializeListHead(&gFolderDataHead);
     // TODO - remove this hardcoded part
-    UNICODE_STRING path1;
-    RtlInitUnicodeString(&path1, L"\\Device\\HarddiskVolume1\\test\\1.txt");
-    auto status = AddPathToHide(&path1);
+    PWCHAR path1 = L"\\Device\\HarddiskVolume1\\test";
+    KUtils::UnicodeString path1str(path1, static_cast<USHORT>(wcslen(path1) * sizeof(WCHAR)), PagedPool);
+    PWCHAR name1 = L"1.txt";
+    KUtils::UnicodeString name1str(name1, static_cast<USHORT>(wcslen(name1) * sizeof(WCHAR)), PagedPool);
+    auto status = AddPathToHide(path1str, name1str);
     if (!NT_SUCCESS(status))
         return status;
 
-    UNICODE_STRING path2;
-    RtlInitUnicodeString(&path2, L"\\Device\\HarddiskVolume1\\test\\1.bmp");
-    status = AddPathToHide(&path2);
+    PWCHAR path2 = L"\\Device\\HarddiskVolume1\\test";
+    KUtils::UnicodeString path2str(path2, static_cast<USHORT>(wcslen(path2) * sizeof(WCHAR)), PagedPool);
+    PWCHAR name2 = L"1.bmp";
+    KUtils::UnicodeString name2str(name2, static_cast<USHORT>(wcslen(name2) * sizeof(WCHAR)), PagedPool);
+    status = AddPathToHide(path2str, name2str);
     if (!NT_SUCCESS(status))
         return status;
 
-    UNICODE_STRING path3;
-    RtlInitUnicodeString(&path3, L"\\Device\\HarddiskVolume1\\test\\test\\2.txt");
-    status = AddPathToHide(&path3);
+    PWCHAR path3 = L"\\Device\\HarddiskVolume1\\test\\test";
+    KUtils::UnicodeString path3str(path3, static_cast<USHORT>(wcslen(path3) * sizeof(WCHAR)), PagedPool);
+    PWCHAR name3 = L"2.txt";
+    KUtils::UnicodeString name3str(name3, static_cast<USHORT>(wcslen(name3) * sizeof(WCHAR)), PagedPool);
+    status = AddPathToHide(path3str, name3str);
     if (!NT_SUCCESS(status))
         return status;
 
-    UNICODE_STRING path4;
-    RtlInitUnicodeString(&path4, L"\\Device\\HarddiskVolume1\\test\\test\\0.txt");
-    status = AddPathToHide(&path4);
+    PWCHAR path4 = L"\\Device\\HarddiskVolume1\\test\\test";
+    KUtils::UnicodeString path4str(path4, static_cast<USHORT>(wcslen(path4) * sizeof(WCHAR)), PagedPool);
+    PWCHAR name4 = L"0.txt";
+    KUtils::UnicodeString name4str(name4, static_cast<USHORT>(wcslen(name4) * sizeof(WCHAR)), PagedPool);
+    status = AddPathToHide(path4str, name4str);
     if (!NT_SUCCESS(status))
         return status;
     // END TODO
@@ -263,15 +257,7 @@ void ShutDown()
     while (&gFolderDataHead != tempFolder)
     {
         FolderData* curFolderData = reinterpret_cast<FolderData*>(tempFolder);
-        PLIST_ENTRY tempFileList = RemoveHeadList(&curFolderData->m_fileListHead);
-        while (&curFolderData->m_fileListHead != tempFileList)
-        {
-            FileList* curFileData = reinterpret_cast<FileList*>(tempFileList);
-            UnicodeStringGuard guardFileName(&curFileData->m_name);
-            ExFreePoolWithTag(curFileData, DRIVER_TAG);
-            tempFileList = RemoveHeadList(&curFolderData->m_fileListHead);
-        }
-        UnicodeStringGuard guardFolderPath(&curFolderData->m_path);
+        curFolderData->m_fileListHead = nullptr;
         ExFreePoolWithTag(curFolderData, DRIVER_TAG);
         tempFolder = RemoveHeadList(&gFolderDataHead);
     }

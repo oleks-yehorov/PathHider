@@ -169,6 +169,9 @@
     <PostBuildEvent>
       <Command>copy "$(IntDir)" "D:\VMShare\TestDrivers\pathHider"</Command>
     </PostBuildEvent>
+    <ClCompile>
+      <DisableSpecificWarnings>4595;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Link>
@@ -180,6 +183,9 @@
     <PostBuildEvent>
       <Command>copy "$(IntDir)" "D:\VMShare\TestDrivers\pathHider"</Command>
     </PostBuildEvent>
+    <ClCompile>
+      <DisableSpecificWarnings>4595;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <Link>
@@ -207,12 +213,15 @@
   <ItemGroup>
     <ClInclude Include="Constants.h" />
     <ClInclude Include="FileNameInformation.h" />
+    <ClInclude Include="IntrusivePtr.hpp" />
+    <ClInclude Include="Memory.h" />
     <ClInclude Include="PathHider.h" />
     <ClInclude Include="UnicodeString.h" />
     <ClInclude Include="UnicodeStringGuard.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FileNameInformation.cpp" />
+    <ClCompile Include="Memory.cpp" />
     <ClCompile Include="PathHider.cpp" />
     <ClCompile Include="PathHiderCreateCleanup.cpp" />
     <ClCompile Include="PathHiderEnumerateDirectory.cpp" />
