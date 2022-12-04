@@ -17,6 +17,9 @@ Environment:
 #include "PathHider.h"
 #include "UnicodeString.h"
 #include "UnicodeStringGuard.h"
+#include "UserModeShared.h"
+#include "FastMutex.h"
+#include "AutoLock.h"
 #include <dontuse.h>
 #include <fltKernel.h>
 
@@ -24,6 +27,8 @@ Environment:
 
 PFLT_FILTER gFilterHandle;
 ULONG_PTR OperationStatusCtx = 1;
+PFLT_PORT FilterPort;
+PFLT_PORT SendClientPort;
 
 #define PTDBG_TRACE_ROUTINES 0x00000001
 #define PTDBG_TRACE_OPERATION_STATUS 0x00000002
@@ -32,6 +37,7 @@ ULONG gTraceFlags = 0;
 
 #define PT_DBG_PRINT(_dbgLevel, _string) (FlagOn(gTraceFlags, (_dbgLevel)) ? DbgPrint _string : ((int)0))
 
+KUtils::FastMutex gFolderDataLock;
 LIST_ENTRY gFolderDataHead;
 /*************************************************************************
         Prototypes
@@ -71,9 +77,8 @@ PathHiderPostCleanup(_Inout_ PFLT_CALLBACK_DATA Data,
 
 // folder list
 NTSTATUS Init();
-void ShutDown();
 NTSTATUS AddPathToHide(const KUtils::UnicodeString& Path, const KUtils::UnicodeString& Name);
-
+void ShutDown();
 EXTERN_C_END
 
 //
@@ -125,6 +130,74 @@ CONST FLT_REGISTRATION FilterRegistration = {
 
 };
 
+_Use_decl_annotations_ NTSTATUS
+PortConnectNotify(PFLT_PORT ClientPort, PVOID ServerPortCookie, PVOID ConnectionContext, ULONG SizeOfContext, PVOID* ConnectionPortCookie)
+{
+    UNREFERENCED_PARAMETER(ServerPortCookie);
+    UNREFERENCED_PARAMETER(ConnectionContext);
+    UNREFERENCED_PARAMETER(SizeOfContext);
+    UNREFERENCED_PARAMETER(ConnectionPortCookie);
+
+    SendClientPort = ClientPort;
+
+    return STATUS_SUCCESS;
+}
+
+void PortDisconnectNotify(PVOID ConnectionCookie)
+{
+    UNREFERENCED_PARAMETER(ConnectionCookie);
+
+    FltCloseClientPort(gFilterHandle, &SendClientPort);
+    SendClientPort = nullptr;
+}
+
+NTSTATUS PortMessageNotify(PVOID PortCookie,
+                           PVOID InputBuffer,
+                           ULONG InputBufferLength,
+                           PVOID OutputBuffer,
+                           ULONG OutputBufferLength,
+                           PULONG ReturnOutputBufferLength)
+{
+    UNREFERENCED_PARAMETER(PortCookie);
+    UNREFERENCED_PARAMETER(OutputBuffer);
+    UNREFERENCED_PARAMETER(OutputBufferLength);
+    UNREFERENCED_PARAMETER(ReturnOutputBufferLength);
+    NTSTATUS status = STATUS_SUCCESS;
+    if (InputBuffer != NULL && InputBufferLength == sizeof(PHMessage))
+    {
+        PHMessage* message = reinterpret_cast<PHMessage*>(InputBuffer);
+        switch (message->m_action)
+        {
+        case PHAction::AddPathToHideAction:
+        {
+            //TODO - add proper status response to usermode 
+            KUtils::UnicodeString path(message->m_data->m_path, PagedPool);
+            KUtils::UnicodeString name(message->m_data->m_name, PagedPool);
+            auto addStatus = AddPathToHide(path, name);
+            if (!NT_SUCCESS(addStatus))
+            {
+                KdPrint(("Failed to hide path (0x%08X)\n", addStatus));
+            }
+            break;
+        }
+        case PHAction::RemoveAllhiddenPaths:
+            ShutDown();
+            break;
+        default:
+            KdPrint(("Unexpected action code %i", message->m_action));
+            status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+    }
+    else
+    {
+        status = STATUS_INVALID_PARAMETER;
+    }
+
+    return status;
+}
+
+
 /*************************************************************************
         MiniFilter initialization and unload routines.
 *************************************************************************/
@@ -145,14 +218,34 @@ DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING RegistryPath)
     status = FltRegisterFilter(DriverObject, &FilterRegistration, &gFilterHandle);
 
     FLT_ASSERT(NT_SUCCESS(status));
-
-    if (NT_SUCCESS(status))
+        
+   	do
     {
-        status = FltStartFiltering(gFilterHandle);
+        UNICODE_STRING name = RTL_CONSTANT_STRING(COMMUNICATION_PORT);
+        PSECURITY_DESCRIPTOR sd;
+
+        status = FltBuildDefaultSecurityDescriptor(&sd, FLT_PORT_ALL_ACCESS);
         if (!NT_SUCCESS(status))
-        {
-            FltUnregisterFilter(gFilterHandle);
-        }
+            break;
+
+        OBJECT_ATTRIBUTES attr;
+        InitializeObjectAttributes(&attr, &name, OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, nullptr, sd);
+
+        status = FltCreateCommunicationPort(gFilterHandle, &FilterPort, &attr, nullptr, PortConnectNotify, PortDisconnectNotify,
+                                            PortMessageNotify, 1);
+
+        FltFreeSecurityDescriptor(sd);
+        if (!NT_SUCCESS(status))
+            break;
+
+        status = FltStartFiltering(gFilterHandle);
+
+    } while (false);
+
+
+    if (!NT_SUCCESS(status))
+    {
+        FltUnregisterFilter(gFilterHandle);
     }
     return status;
 }
@@ -165,7 +258,7 @@ PathHiderUnload(_In_ FLT_FILTER_UNLOAD_FLAGS Flags)
     PAGED_CODE();
 
     PT_DBG_PRINT(PTDBG_TRACE_ROUTINES, ("PathHider!PathHiderUnload: Entered\n"));
-
+    FltCloseCommunicationPort(FilterPort);
     FltUnregisterFilter(gFilterHandle);
 
     ShutDown();
@@ -177,6 +270,7 @@ NTSTATUS AddPathToHide(const KUtils::UnicodeString& Path, const KUtils::UnicodeS
     if (Path.IsEmpty() || Name.IsEmpty())
         return STATUS_INVALID_PARAMETER;
 
+    KUtils::AutoLock<KUtils::FastMutex> guard(gFolderDataLock);
     // enumerate list - looking for the parent folder
     PLIST_ENTRY temp = &gFolderDataHead;
     FolderData* folderData = nullptr;
@@ -213,10 +307,11 @@ NTSTATUS AddPathToHide(const KUtils::UnicodeString& Path, const KUtils::UnicodeS
 
 NTSTATUS Init()
 {
+    gFolderDataLock.Init();
     RtlZeroMemory(&gFolderDataHead, sizeof(gFolderDataHead));
     InitializeListHead(&gFolderDataHead);
     // TODO - remove this hardcoded part
-    PWCHAR path1 = L"\\Device\\HarddiskVolume1\\test";
+    /* PWCHAR path1 = L"\\Device\\HarddiskVolume1\\test";
     KUtils::UnicodeString path1str(path1, static_cast<USHORT>(wcslen(path1) * sizeof(WCHAR)), PagedPool);
     PWCHAR name1 = L"1.txt";
     KUtils::UnicodeString name1str(name1, static_cast<USHORT>(wcslen(name1) * sizeof(WCHAR)), PagedPool);
@@ -247,12 +342,13 @@ NTSTATUS Init()
     status = AddPathToHide(path4str, name4str);
     if (!NT_SUCCESS(status))
         return status;
-    // END TODO
+    // END TODO*/
     return STATUS_SUCCESS;
 }
 
 void ShutDown()
 {
+    KUtils::AutoLock<KUtils::FastMutex> guard(gFolderDataLock);
     PLIST_ENTRY tempFolder = RemoveHeadList(&gFolderDataHead);
     while (&gFolderDataHead != tempFolder)
     {

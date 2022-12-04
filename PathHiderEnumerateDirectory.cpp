@@ -71,7 +71,7 @@ bool FileObjectToHide(PFLT_CALLBACK_DATA Data,
                       PUNICODE_STRING Name,
                       intrusive_ptr<FileList>& FolderDataHead)
 {
-    FilterFileNameInformation info(Data);
+    KUtils::FilterFileNameInformation info(Data);
     auto status = info.Parse();
     if (!NT_SUCCESS(status))
     {

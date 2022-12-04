@@ -26,7 +26,7 @@ FolderData* GetFolderDataByFolderPath(PUNICODE_STRING FolderPath)
 bool FolderContainsFilesToHide(PFLT_CALLBACK_DATA Data,
                                PCFLT_RELATED_OBJECTS FltObjects)
 {
-    FilterFileNameInformation info(Data);
+    KUtils::FilterFileNameInformation info(Data);
     if (!info)
     {
         return false;
