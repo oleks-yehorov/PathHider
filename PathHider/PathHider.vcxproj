@@ -169,7 +169,8 @@
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
     </DriverSign>
     <PostBuildEvent>
-      <Command>copy "$(IntDir)" "D:\VMShare\TestDrivers\pathHider"</Command>
+      <Command>copy "$(IntDir)" "D:\VMShare\TestDrivers\pathHider"
+exit 0</Command>
     </PostBuildEvent>
     <ClCompile>
       <DisableSpecificWarnings>4595;4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
@@ -184,7 +185,8 @@
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
     </DriverSign>
     <PostBuildEvent>
-      <Command>copy "$(IntDir)" "D:\VMShare\TestDrivers\pathHider"</Command>
+      <Command>copy "$(IntDir)" "D:\VMShare\TestDrivers\pathHider"
+exit 0</Command>
     </PostBuildEvent>
     <ClCompile>
       <DisableSpecificWarnings>4595;4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
