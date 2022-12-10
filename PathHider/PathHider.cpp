@@ -16,7 +16,6 @@ Environment:
 
 #include "PathHider.h"
 #include "UnicodeString.h"
-#include "UnicodeStringGuard.h"
 #include "UserModeShared.h"
 #include "FastMutex.h"
 #include "AutoLock.h"
@@ -297,10 +296,10 @@ NTSTATUS AddPathToHide(const KUtils::UnicodeString& Path, const KUtils::UnicodeS
         folderData->m_path = Path;
     }
     // insert file name to this folder entry
-    intrusive_ptr<FileList> fileEntry = new FileList();
+    KUtils::intrusive_ptr<FileList> fileEntry = new FileList();
     fileEntry->m_name = Name;
-    fileEntry->m_next = intrusive_ptr<FileList>(folderData->m_fileListHead);
-    folderData->m_fileListHead = intrusive_ptr<FileList>(fileEntry);
+    fileEntry->m_next = KUtils::intrusive_ptr<FileList>(folderData->m_fileListHead);
+    folderData->m_fileListHead = KUtils::intrusive_ptr<FileList>(fileEntry);
 
     return STATUS_SUCCESS;
 }

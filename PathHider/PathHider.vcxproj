@@ -225,7 +225,6 @@ exit 0</Command>
     <ClInclude Include="Memory.h" />
     <ClInclude Include="PathHider.h" />
     <ClInclude Include="UnicodeString.h" />
-    <ClInclude Include="UnicodeStringGuard.h" />
     <ClInclude Include="UserModeShared.h" />
   </ItemGroup>
   <ItemGroup>

@@ -2,7 +2,6 @@
 
 #include "PathHider.h"
 #include "FileNameInformation.h"
-#include "UnicodeStringGuard.h"
 
 extern LIST_ENTRY gFolderDataHead;
 
@@ -51,7 +50,7 @@ bool FolderContainsFilesToHide(PFLT_CALLBACK_DATA Data,
             return false;
         }
         RtlZeroMemory(context, sizeof(FolderContext));
-        context->m_fileListHead = intrusive_ptr<FileList>(folderData->m_fileListHead);
+        context->m_fileListHead = KUtils::intrusive_ptr<FileList>(folderData->m_fileListHead);
         status =
             FltSetFileContext(FltObjects->Instance, FltObjects->FileObject,
                               FLT_SET_CONTEXT_KEEP_IF_EXISTS, context,

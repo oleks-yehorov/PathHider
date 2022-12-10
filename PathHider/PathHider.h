@@ -16,10 +16,10 @@ ZwQueryInformationProcess(_In_ HANDLE ProcessHandle,
                           _In_ ULONG ProcessInformationLength,
                           _Out_opt_ PULONG ReturnLength);
 
-struct FileList : public RefCountedBase
+struct FileList : public KUtils::RefCountedBase
 {
     // LIST_ENTRY m_listEntry;
-    intrusive_ptr<FileList> m_next;
+    KUtils::intrusive_ptr<FileList> m_next;
     KUtils::UnicodeString m_name;
 };
 
@@ -28,12 +28,12 @@ struct FolderData
     LIST_ENTRY m_listEntry;
     KUtils::UnicodeString m_path;
     //LIST_ENTRY m_fileListHead;
-    intrusive_ptr<FileList> m_fileListHead;
+    KUtils::intrusive_ptr<FileList> m_fileListHead;
 };
 
 struct FolderContext
 {
-    intrusive_ptr<FileList> m_fileListHead;
+    KUtils::intrusive_ptr<FileList> m_fileListHead;
 };
 
 const FLT_CONTEXT_REGISTRATION ContextRegistration[] = {

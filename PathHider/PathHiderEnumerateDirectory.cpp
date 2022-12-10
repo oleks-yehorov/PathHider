@@ -68,8 +68,7 @@ bool IsRelevantFileInfoQuery(PFLT_CALLBACK_DATA Data)
 }
 
 bool FileObjectToHide(PFLT_CALLBACK_DATA Data,
-                      PUNICODE_STRING Name,
-                      intrusive_ptr<FileList>& FolderDataHead)
+                      PUNICODE_STRING Name, KUtils::intrusive_ptr<FileList>& FolderDataHead)
 {
     KUtils::FilterFileNameInformation info(Data);
     auto status = info.Parse();
@@ -78,14 +77,14 @@ bool FileObjectToHide(PFLT_CALLBACK_DATA Data,
         KdPrint(("Failed to parse file name info (0x%08X)\n", status));
         return false;
     }
-    intrusive_ptr<FileList> temp = intrusive_ptr<FileList>(FolderDataHead);
+    KUtils::intrusive_ptr<FileList> temp = KUtils::intrusive_ptr<FileList>(FolderDataHead);
     while (temp != nullptr)
     {
         if (RtlEqualUnicodeString(&temp->m_name.GetUnicodeString(), Name, TRUE))
         {
             return true;
         }
-        temp = intrusive_ptr<FileList>(temp->m_next);
+        temp = KUtils::intrusive_ptr<FileList>(temp->m_next);
     }
     return false;
 }
