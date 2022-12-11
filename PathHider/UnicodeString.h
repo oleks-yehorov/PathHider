@@ -16,7 +16,7 @@ namespace KUtils
         SimpleUString(const UNICODE_STRING& str);
         SimpleUString(const SimpleUString& str);
 
-        ~SimpleUString();
+        ~SimpleUString() = default;
 
         SimpleUString& operator=(const SimpleUString& str);
 
@@ -121,7 +121,7 @@ namespace KUtils
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // UnicodeString
 
-    class UnicodeString : public SimpleUString
+    class UnicodeString final: public SimpleUString
     {
       public:
         UnicodeString(POOL_TYPE poolType = NonPagedPool);
@@ -219,8 +219,6 @@ namespace KUtils
 
         return *this;
     }
-
-    inline SimpleUString::~SimpleUString() {}
 
     inline UNICODE_STRING& SimpleUString::GetUnicodeString() { return m_Str; }
 

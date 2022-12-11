@@ -3,18 +3,15 @@
 
 #include "UnicodeString.h"
 #include "Constants.h"
+#include "Memory.h"
 #include <limits.h>
 
 // TODO Get rid of c-style casts
 namespace KUtils
 {
-    UnicodeString::UnicodeString(POOL_TYPE poolType)
-        : SimpleUString(), m_PoolType(poolType), m_Buffer(NULL), m_BufferSize(0)
-    {
-    }
+    UnicodeString::UnicodeString(POOL_TYPE poolType) : SimpleUString(), m_PoolType(poolType), m_Buffer(NULL), m_BufferSize(0) {}
 
-    UnicodeString::UnicodeString(PCWCH str, POOL_TYPE poolType)
-        : SimpleUString(), m_PoolType(poolType), m_Buffer(NULL), m_BufferSize(0)
+    UnicodeString::UnicodeString(PCWCH str, POOL_TYPE poolType) : SimpleUString(), m_PoolType(poolType), m_Buffer(NULL), m_BufferSize(0)
     {
         if (str != NULL)
         {
@@ -24,9 +21,7 @@ namespace KUtils
         }
     }
 
-    UnicodeString::UnicodeString(PCWCH str,
-                                 USHORT byteLength,
-                                 POOL_TYPE poolType)
+    UnicodeString::UnicodeString(PCWCH str, USHORT byteLength, POOL_TYPE poolType)
         : SimpleUString(), m_PoolType(poolType), m_Buffer(NULL), m_BufferSize(0)
     {
         if (str != NULL && byteLength != 0)
@@ -52,12 +47,7 @@ namespace KUtils
     {
         if (maxByteLength > 0)
         {
-            m_Buffer = ExAllocatePoolWithTag(m_PoolType, (ULONG)maxByteLength,
-                                             DRIVER_TAG);
-            if (!m_Buffer)
-            {
-                ExRaiseStatus(STATUS_NO_MEMORY);
-            }
+            m_Buffer = new (m_PoolType) CHAR[maxByteLength];
             m_BufferSize = maxByteLength;
             m_Str.Buffer = (PWSTR)m_Buffer;
             m_Str.Length = 0;
@@ -65,9 +55,7 @@ namespace KUtils
         }
     }
 
-    UnicodeString::UnicodeString(const UnicodeString& str)
-        : SimpleUString(), m_PoolType(str.m_PoolType), m_Buffer(NULL),
-          m_BufferSize(0)
+    UnicodeString::UnicodeString(const UnicodeString& str) : SimpleUString(), m_PoolType(str.m_PoolType), m_Buffer(NULL), m_BufferSize(0)
     {
         this->Init(str.m_Str.Buffer, str.m_Str.Length, str.m_Str.MaximumLength);
     }
@@ -80,12 +68,7 @@ namespace KUtils
 
         if (maxByteLength > 0)
         {
-            m_Buffer = ExAllocatePoolWithTag(m_PoolType, (ULONG)maxByteLength,
-                                             DRIVER_TAG);
-            if (!m_Buffer)
-            {
-                ExRaiseStatus(STATUS_NO_MEMORY);
-            }
+            m_Buffer = new (m_PoolType) CHAR[maxByteLength];
             m_BufferSize = maxByteLength;
             m_Str.Buffer = (PWSTR)m_Buffer;
             RtlCopyMemory(m_Str.Buffer, str, length);
@@ -95,7 +78,7 @@ namespace KUtils
         m_Str.MaximumLength = maxByteLength;
     }
 
-    UnicodeString::~UnicodeString() { ExFreePoolWithTag(m_Buffer, DRIVER_TAG); }
+    UnicodeString::~UnicodeString() { delete m_Buffer; }
 
     void UnicodeString::Clear()
     {
@@ -131,8 +114,7 @@ namespace KUtils
 
         if (!str.IsEmpty())
         {
-            ULONG newMaxByteLength =
-                ((m_Str.Length + str.ByteLength()) * 3 / 2) & ~1;
+            ULONG newMaxByteLength = ((m_Str.Length + str.ByteLength()) * 3 / 2) & ~1;
             if (newMaxByteLength > USHRT_MAX)
             {
                 newMaxByteLength = USHRT_MAX;
@@ -146,8 +128,7 @@ namespace KUtils
 
             this->Realloc((USHORT)newMaxByteLength);
 
-            RtlCopyMemory(m_Str.Buffer + this->CharLength(), str.Buffer(),
-                          newByteLength - m_Str.Length);
+            RtlCopyMemory(m_Str.Buffer + this->CharLength(), str.Buffer(), newByteLength - m_Str.Length);
 
             m_Str.Length = newByteLength;
         }
@@ -161,19 +142,15 @@ namespace KUtils
         {
             if (m_BufferSize < newMaxByteLength)
             {
-                PVOID pNewBuffer = ExAllocatePoolWithTag(
-                    m_PoolType, (ULONG)newMaxByteLength, DRIVER_TAG);
-                if (!pNewBuffer)
-                {
-                    ExRaiseStatus(STATUS_NO_MEMORY);
-                }
+                PVOID pNewBuffer = new (m_PoolType) CHAR[newMaxByteLength];
                 if (m_Buffer != NULL)
                 {
                     if (m_Str.Length != 0)
                     {
                         RtlCopyMemory(pNewBuffer, m_Str.Buffer, m_Str.Length);
                     }
-                    ExFreePoolWithTag(m_Buffer, DRIVER_TAG);
+
+                    delete m_Buffer;
                 }
 
                 m_Buffer = pNewBuffer;
@@ -203,8 +180,7 @@ namespace KUtils
         return tmp;
     }
 
-    UnicodeString operator+(const SimpleUString& str1,
-                            const SimpleUString& str2)
+    UnicodeString operator+(const SimpleUString& str1, const SimpleUString& str2)
     {
         UnicodeString newStr(str1);
         newStr += str2;

@@ -352,8 +352,7 @@ void ShutDown()
     while (&gFolderDataHead != tempFolder)
     {
         FolderData* curFolderData = reinterpret_cast<FolderData*>(tempFolder);
-        curFolderData->m_fileListHead = nullptr;
-        ExFreePoolWithTag(curFolderData, DRIVER_TAG);
+        delete curFolderData;
         tempFolder = RemoveHeadList(&gFolderDataHead);
     }
 }

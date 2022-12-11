@@ -25,17 +25,17 @@ namespace KUtils
                                   FileNameOptions options = FileNameOptions::QueryDefault | FileNameOptions::Normalized);
         ~FilterFileNameInformation();
 
-        operator bool() const { return _info != nullptr; }
+        operator bool() const { return m_info != nullptr; }
 
-        PFLT_FILE_NAME_INFORMATION Get() const { return _info; }
+        PFLT_FILE_NAME_INFORMATION Get() const { return m_info; }
 
         operator PFLT_FILE_NAME_INFORMATION() const { return Get(); }
 
-        PFLT_FILE_NAME_INFORMATION operator->() { return _info; }
+        PFLT_FILE_NAME_INFORMATION operator->() { return m_info; }
 
         NTSTATUS Parse();
 
       private:
-        PFLT_FILE_NAME_INFORMATION _info;
+        PFLT_FILE_NAME_INFORMATION m_info;
     };
 } // namespace KUtils

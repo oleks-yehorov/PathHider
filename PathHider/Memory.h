@@ -11,8 +11,22 @@ inline void* __cdecl operator new(unsigned __int64 size)
     {
         RtlZeroMemory(result, size);
     }
+    else
+    {
+        ExRaiseStatus(STATUS_NO_MEMORY);
+    }
 
     return result;
+}
+
+inline void* __cdecl operator new[](size_t size, POOL_TYPE pool)
+{
+    PVOID ptr = ExAllocatePoolWithTag(pool, (ULONG)size, DRIVER_TAG);
+    if (ptr == NULL)
+    {
+        ExRaiseStatus(STATUS_NO_MEMORY);
+    }
+    return ptr;
 }
 
 inline void __cdecl operator delete(void* ptr, unsigned __int64) 

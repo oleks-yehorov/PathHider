@@ -2,15 +2,15 @@
     
 void KUtils::FastMutex::Init() 
 { 
-    ExInitializeFastMutex(&_mutex); 
+    ExInitializeFastMutex(&m_mutex); 
 }
 
 void KUtils::FastMutex::Lock() 
 { 
-    ExAcquireFastMutex(&_mutex); 
+    ExAcquireFastMutex(&m_mutex); 
 }
 
 void KUtils::FastMutex::Unlock() 
 { 
-    ExReleaseFastMutex(&_mutex); 
+    ExReleaseFastMutex(&m_mutex); 
 }

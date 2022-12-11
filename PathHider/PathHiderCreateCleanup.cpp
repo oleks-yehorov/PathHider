@@ -36,7 +36,7 @@ bool FolderContainsFilesToHide(PFLT_CALLBACK_DATA Data,
         KdPrint(("Failed to parse file name info (0x%08X)\n", status));
         return false;
     }
-    KdPrint(("Folder path: %wZ\n", &info->Name));
+    //KdPrint(("Folder path: %wZ\n", &info->Name));
     auto folderData = GetFolderDataByFolderPath(&info->Name);
     FolderContext* context;
     if (folderData)
@@ -50,7 +50,7 @@ bool FolderContainsFilesToHide(PFLT_CALLBACK_DATA Data,
             return false;
         }
         RtlZeroMemory(context, sizeof(FolderContext));
-        context->m_fileListHead = KUtils::intrusive_ptr<FileList>(folderData->m_fileListHead);
+        
         status =
             FltSetFileContext(FltObjects->Instance, FltObjects->FileObject,
                               FLT_SET_CONTEXT_KEEP_IF_EXISTS, context,
@@ -63,6 +63,10 @@ bool FolderContainsFilesToHide(PFLT_CALLBACK_DATA Data,
         {
             FltReleaseContext(context);
             return false;
+        }
+        else
+        {
+            context->m_fileListHead = KUtils::intrusive_ptr<FileList>(folderData->m_fileListHead);
         }
         FltReleaseContext(context);
     }
@@ -132,7 +136,7 @@ PathHiderPostCleanup(_Inout_ PFLT_CALLBACK_DATA Data,
         KdPrint(("Failed to get file context (0x%08X)\n", status));
         return FLT_POSTOP_FINISHED_PROCESSING;
     }
-    context->m_fileListHead = nullptr;
+    context->~FolderContext(); 
     FltReleaseContext(context);
     FltDeleteContext(context);
     return FLT_POSTOP_FINISHED_PROCESSING;

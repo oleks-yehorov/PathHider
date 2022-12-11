@@ -15,24 +15,24 @@ namespace KUtils
       public:
         typedef T element_type;
 
-        intrusive_ptr() : p_(0) {}
+        intrusive_ptr() : m_p(0) {}
 
-        intrusive_ptr(T* p, bool add_ref = true) : p_(p)
+        intrusive_ptr(T* p, bool add_ref = true) : m_p(p)
         {
-            if (p_ != 0 && add_ref)
-                intrusive_ptr_add_ref(p_);
+            if (m_p != 0 && add_ref)
+                intrusive_ptr_add_ref(m_p);
         }
 
-        intrusive_ptr(intrusive_ptr const& rhs) : p_(rhs.p_)
+        intrusive_ptr(intrusive_ptr const& rhs) : m_p(rhs.m_p)
         {
-            if (p_ != 0)
-                intrusive_ptr_add_ref(p_);
+            if (m_p != 0)
+                intrusive_ptr_add_ref(m_p);
         }
 
         ~intrusive_ptr()
         {
-            if (p_ != 0)
-                intrusive_ptr_release(p_);
+            if (m_p != 0)
+                intrusive_ptr_release(m_p);
         }
 
         intrusive_ptr& operator=(intrusive_ptr const& rhs)
@@ -47,27 +47,27 @@ namespace KUtils
             return *this;
         }
 
-        T* get() const { return p_; }
+        T* get() const { return m_p; }
 
-        T& operator*() const { return *p_; }
+        T& operator*() const { return *m_p; }
 
-        T* operator->() const { return p_; }
+        T* operator->() const { return m_p; }
 
         typedef T* this_type::*unspecified_bool_type;
 
-        operator unspecified_bool_type() const { return p_ == 0 ? 0 : &this_type::p_; }
+        operator unspecified_bool_type() const { return m_p == 0 ? 0 : &this_type::m_p; }
 
-        bool operator!() const { return p_ == 0; }
+        bool operator!() const { return m_p == 0; }
 
         void swap(intrusive_ptr& rhs)
         {
-            T* tmp = p_;
-            p_ = rhs.p_;
-            rhs.p_ = tmp;
+            T* tmp = m_p;
+            m_p = rhs.m_p;
+            rhs.m_p = tmp;
         }
 
       private:
-        T* p_;
+        T* m_p;
     };
 
     template <class T, class U> inline bool operator==(intrusive_ptr<T> const& a, intrusive_ptr<U> const& b) { return a.get() == b.get(); }

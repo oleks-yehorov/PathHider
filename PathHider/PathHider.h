@@ -18,7 +18,6 @@ ZwQueryInformationProcess(_In_ HANDLE ProcessHandle,
 
 struct FileList : public KUtils::RefCountedBase
 {
-    // LIST_ENTRY m_listEntry;
     KUtils::intrusive_ptr<FileList> m_next;
     KUtils::UnicodeString m_name;
 };
@@ -27,7 +26,6 @@ struct FolderData
 {
     LIST_ENTRY m_listEntry;
     KUtils::UnicodeString m_path;
-    //LIST_ENTRY m_fileListHead;
     KUtils::intrusive_ptr<FileList> m_fileListHead;
 };
 
