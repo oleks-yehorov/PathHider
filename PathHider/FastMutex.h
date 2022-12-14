@@ -9,8 +9,8 @@ namespace KUtils
       public:
         void Init();
 
-        void Lock();
-        void Unlock();
+        _IRQL_raises_(APC_LEVEL) _IRQL_saves_global_(OldIrql, &m_mutex) void Lock();
+        _IRQL_requires_(APC_LEVEL) _IRQL_restores_global_(OldIrql, &m_mutex) void Unlock();
 
       private:
         FAST_MUTEX m_mutex;

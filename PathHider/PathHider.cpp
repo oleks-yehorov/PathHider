@@ -129,7 +129,7 @@ CONST FLT_REGISTRATION FilterRegistration = {
 
 };
 
-_Use_decl_annotations_ NTSTATUS
+NTSTATUS
 PortConnectNotify(PFLT_PORT ClientPort, PVOID ServerPortCookie, PVOID ConnectionContext, ULONG SizeOfContext, PVOID* ConnectionPortCookie)
 {
     UNREFERENCED_PARAMETER(ServerPortCookie);
