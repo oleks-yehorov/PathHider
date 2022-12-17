@@ -169,7 +169,7 @@ NTSTATUS PortMessageNotify(PVOID PortCookie,
         {
         case PHAction::AddPathToHideAction:
         {
-            //TODO - add proper status response to usermode 
+            // TODO - add proper status response to usermode 
             KUtils::UnicodeString path(message->m_data->m_path, PagedPool);
             KUtils::UnicodeString name(message->m_data->m_name, PagedPool);
             auto addStatus = AddPathToHide(path, name);
@@ -309,39 +309,6 @@ NTSTATUS Init()
     gFolderDataLock.Init();
     RtlZeroMemory(&gFolderDataHead, sizeof(gFolderDataHead));
     InitializeListHead(&gFolderDataHead);
-    // TODO - remove this hardcoded part
-    /* PWCHAR path1 = L"\\Device\\HarddiskVolume1\\test";
-    KUtils::UnicodeString path1str(path1, static_cast<USHORT>(wcslen(path1) * sizeof(WCHAR)), PagedPool);
-    PWCHAR name1 = L"1.txt";
-    KUtils::UnicodeString name1str(name1, static_cast<USHORT>(wcslen(name1) * sizeof(WCHAR)), PagedPool);
-    auto status = AddPathToHide(path1str, name1str);
-    if (!NT_SUCCESS(status))
-        return status;
-
-    PWCHAR path2 = L"\\Device\\HarddiskVolume1\\test";
-    KUtils::UnicodeString path2str(path2, static_cast<USHORT>(wcslen(path2) * sizeof(WCHAR)), PagedPool);
-    PWCHAR name2 = L"1.bmp";
-    KUtils::UnicodeString name2str(name2, static_cast<USHORT>(wcslen(name2) * sizeof(WCHAR)), PagedPool);
-    status = AddPathToHide(path2str, name2str);
-    if (!NT_SUCCESS(status))
-        return status;
-
-    PWCHAR path3 = L"\\Device\\HarddiskVolume1\\test\\test";
-    KUtils::UnicodeString path3str(path3, static_cast<USHORT>(wcslen(path3) * sizeof(WCHAR)), PagedPool);
-    PWCHAR name3 = L"2.txt";
-    KUtils::UnicodeString name3str(name3, static_cast<USHORT>(wcslen(name3) * sizeof(WCHAR)), PagedPool);
-    status = AddPathToHide(path3str, name3str);
-    if (!NT_SUCCESS(status))
-        return status;
-
-    PWCHAR path4 = L"\\Device\\HarddiskVolume1\\test\\test";
-    KUtils::UnicodeString path4str(path4, static_cast<USHORT>(wcslen(path4) * sizeof(WCHAR)), PagedPool);
-    PWCHAR name4 = L"0.txt";
-    KUtils::UnicodeString name4str(name4, static_cast<USHORT>(wcslen(name4) * sizeof(WCHAR)), PagedPool);
-    status = AddPathToHide(path4str, name4str);
-    if (!NT_SUCCESS(status))
-        return status;
-    // END TODO*/
     return STATUS_SUCCESS;
 }
 
