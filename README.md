@@ -1,6 +1,5 @@
 # PathHider overview
-The project is a filesystem minifilter driver I wrote to learn\refresh kernel mode development for Windows. The main feature - it can "hide" files\folder from a user (they will not be visible in Windows Explorer or similar applications). 
-The mechanism is simple - the minifilter adds callbacks for IRP_MJ_DIRECTORY_CONTROL and modifies the result of this call to "hide" the file objects (remove the data about them results of the lower level call).
+The project is a filesystem mini-filter driver I wrote to learn\refresh kernel mode development for Windows. The main feature - it can "hide" files\folder from a user (they will not be visible in Windows Explorer or similar applications). The mechanism is simple - the mini-filter adds callbacks for IRP_MJ_DIRECTORY_CONTROL and modifies the result of this call to "hide" the file objects (remove the data about the entry from the results of the lower-level call).
 
 # Build
 You need VS 2019 (I use community edition) and WDK 10. 
