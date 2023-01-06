@@ -161,38 +161,46 @@ NTSTATUS PortMessageNotify(PVOID PortCookie,
     UNREFERENCED_PARAMETER(OutputBuffer);
     UNREFERENCED_PARAMETER(OutputBufferLength);
     UNREFERENCED_PARAMETER(ReturnOutputBufferLength);
+    
     NTSTATUS status = STATUS_SUCCESS;
-    if (InputBuffer != NULL && InputBufferLength == sizeof(PHMessage))
+    __try
     {
-        PHMessage* message = reinterpret_cast<PHMessage*>(InputBuffer);
-        switch (message->m_action)
+        if (InputBuffer != NULL && InputBufferLength == sizeof(PHMessage))
         {
-        case PHAction::AddPathToHideAction:
-        {
-            // TODO - add proper status response to usermode 
-            KUtils::UnicodeString path(message->m_data->m_path, PagedPool);
-            KUtils::UnicodeString name(message->m_data->m_name, PagedPool);
-            auto addStatus = AddPathToHide(path, name);
-            if (!NT_SUCCESS(addStatus))
+            PHMessage* message = reinterpret_cast<PHMessage*>(InputBuffer);
+            switch (message->m_action)
             {
-                KdPrint(("Failed to hide path (0x%08X)\n", addStatus));
+            case PHAction::AddPathToHideAction:
+            {
+                // TODO - add proper status response to usermode
+                KUtils::UnicodeString path(message->m_data->m_path, PagedPool);
+                KUtils::UnicodeString name(message->m_data->m_name, PagedPool);
+                auto addStatus = AddPathToHide(path, name);
+                if (!NT_SUCCESS(addStatus))
+                {
+                    KdPrint(("Failed to hide path (0x%08X)\n", addStatus));
+                }
+                break;
             }
-            break;
+            case PHAction::RemoveAllhiddenPaths:
+                ShutDown();
+                break;
+            default:
+                KdPrint(("Unexpected action code %i", message->m_action));
+                status = STATUS_INVALID_PARAMETER;
+                break;
+            }
         }
-        case PHAction::RemoveAllhiddenPaths:
-            ShutDown();
-            break;
-        default:
-            KdPrint(("Unexpected action code %i", message->m_action));
+        else
+        {
             status = STATUS_INVALID_PARAMETER;
-            break;
         }
     }
-    else
+    __except (EXCEPTION_EXECUTE_HANDLER)
     {
-        status = STATUS_INVALID_PARAMETER;
+        status = GetExceptionCode();
+        KdPrint(("An exception occurred at " __FUNCTION__ "\n"));
     }
-
     return status;
 }
 

@@ -124,17 +124,13 @@ namespace KUtils
     class UnicodeString final: public SimpleUString
     {
       public:
-        UnicodeString(POOL_TYPE poolType = NonPagedPool);
-        explicit UnicodeString(PCWCH str, POOL_TYPE poolType = NonPagedPool);
+        UnicodeString(POOL_TYPE poolType = NonPagedPoolNx);
+        explicit UnicodeString(PCWCH str, POOL_TYPE poolType = NonPagedPoolNx);
         explicit UnicodeString(PCWCH str,
-                               USHORT byteLength,
-                               POOL_TYPE poolType = NonPagedPool);
-        explicit UnicodeString(const UNICODE_STRING& str,
-                               POOL_TYPE poolType = NonPagedPool);
-        explicit UnicodeString(const SimpleUString& str,
-                               POOL_TYPE poolType = NonPagedPool);
-        explicit UnicodeString(USHORT maxByteLength,
-                               POOL_TYPE poolType = NonPagedPool);
+                               USHORT byteLength, POOL_TYPE poolType = NonPagedPoolNx);
+        explicit UnicodeString(const UNICODE_STRING& str, POOL_TYPE poolType = NonPagedPoolNx);
+        explicit UnicodeString(const SimpleUString& str, POOL_TYPE poolType = NonPagedPoolNx);
+        explicit UnicodeString(USHORT maxByteLength, POOL_TYPE poolType = NonPagedPoolNx);
         UnicodeString(const UnicodeString& str);
 
         ~UnicodeString();
