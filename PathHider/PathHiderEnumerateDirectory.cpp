@@ -116,6 +116,13 @@ bool ShouldHandleRequest(PFLT_CALLBACK_DATA Data,
     return retValue;
 }
 
+template <class T> 
+bool AddressIsValid(const void* ValidBufferStart, const void* ValidBufferEnd, T* AddressToCheck) 
+{    
+    return retVal = (reinterpret_cast<const void*>(AddressToCheck) >= ValidBufferStart &&
+                   reinterpret_cast<const void*>(AddressToCheck) <= reinterpret_cast<const char*>(ValidBufferEnd) - sizeof(T));
+}
+
 template <class T>
 void HideFiles(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects)
 {
@@ -127,7 +134,9 @@ void HideFiles(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects)
     bool moveLastFileDirInfo = true;
     fileDirInfo = (T*)Data->Iopb->Parameters.DirectoryControl.QueryDirectory
                       .DirectoryBuffer;
-
+    const void* ValidBufferStart = Data->Iopb->Parameters.DirectoryControl.QueryDirectory.DirectoryBuffer;
+    const void* ValidBufferEnd = reinterpret_cast<const char*>(ValidBufferStart) + Data->Iopb->Parameters.DirectoryControl.QueryDirectory.Length;
+    
     FolderContext* context = nullptr;
     auto status = FltGetFileContext(FltObjects->Instance, FltObjects->FileObject,
                                reinterpret_cast<PFLT_CONTEXT*>(&context));
@@ -136,79 +145,85 @@ void HideFiles(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects)
         KdPrint(("Failed to get file context (0x%08X)\n", status));
         return;
     }
-
-    for (;;)
+    __try
     {
-        fileName.Buffer = fileDirInfo->FileName;
-        fileName.Length = (USHORT)fileDirInfo->FileNameLength;
-        fileName.MaximumLength = fileName.Length;
-
-        if (FileObjectToHide(Data, &fileName,
-                             context->m_fileListHead)) // Skip this entry
+        //Never Trust Buffers
+        ProbeForWrite(fileDirInfo, Data->Iopb->Parameters.DirectoryControl.QueryDirectory.Length, 1);
+        for (;;)
         {
-            if (lastFileDirInfo != NULL) // This is not the first entry
+            if (!AddressIsValid<T>(ValidBufferStart, ValidBufferEnd, fileDirInfo))
+                __leave;
+            fileName.Buffer = fileDirInfo->FileName;
+            fileName.Length = (USHORT)fileDirInfo->FileNameLength;
+            fileName.MaximumLength = fileName.Length;
+
+            if (FileObjectToHide(Data, &fileName,
+                                 context->m_fileListHead)) // Skip this entry
             {
-                // Just point the last info's offset to the next info
-                if (fileDirInfo->NextEntryOffset != 0)
+                if (lastFileDirInfo != NULL) // This is not the first entry
                 {
-                    lastFileDirInfo->NextEntryOffset +=
-                        fileDirInfo->NextEntryOffset;
-                    moveLastFileDirInfo = false;
+                    // Just point the last info's offset to the next info
+                    if (fileDirInfo->NextEntryOffset != 0)
+                    {
+                        lastFileDirInfo->NextEntryOffset += fileDirInfo->NextEntryOffset;
+                        moveLastFileDirInfo = false;
+                    }
+                    else // This is the last entry
+                    {
+                        lastFileDirInfo->NextEntryOffset = 0;
+                    }
                 }
-                else // This is the last entry
+                else
                 {
-                    lastFileDirInfo->NextEntryOffset = 0;
+                    if (fileDirInfo->NextEntryOffset != 0) // This is the first
+                                                           // entry
+                    {
+                        nextFileDirInfo = (T*)((PUCHAR)fileDirInfo + fileDirInfo->NextEntryOffset);
+                        if (!AddressIsValid<T>(ValidBufferStart, ValidBufferEnd, nextFileDirInfo))
+                            __leave;
+                        moveLength = 0;
+                        while (nextFileDirInfo->NextEntryOffset != 0)
+                        {
+                            moveLength += FIELD_OFFSET(T, FileName) + nextFileDirInfo->FileNameLength;
+                            nextFileDirInfo = (T*)((PUCHAR)nextFileDirInfo + nextFileDirInfo->NextEntryOffset);
+                            if (!AddressIsValid<T>(ValidBufferStart, ValidBufferEnd, nextFileDirInfo))
+                                __leave;
+                        }
+
+                        moveLength += FIELD_OFFSET(T, FileName) + nextFileDirInfo->FileNameLength;
+
+                        RtlMoveMemory(fileDirInfo, (PUCHAR)fileDirInfo + fileDirInfo->NextEntryOffset, moveLength);
+                        moveLastFileDirInfo = false;
+                    }
+                    else // This is the first and last entry, so there's nothing to
+                         // return
+                    {
+                        FltReleaseContext(context);
+                        Data->IoStatus.Status = STATUS_NO_MORE_ENTRIES;
+                        return;
+                    }
                 }
+            }
+
+            if (moveLastFileDirInfo)
+            {
+                lastFileDirInfo = fileDirInfo;
             }
             else
             {
-                if (fileDirInfo->NextEntryOffset != 0) // This is the first
-                                                       // entry
-                {
-                    nextFileDirInfo = (T*)((PUCHAR)fileDirInfo +
-                                           fileDirInfo->NextEntryOffset);
-                    moveLength = 0;
-                    while (nextFileDirInfo->NextEntryOffset != 0)
-                    {
-                        moveLength += FIELD_OFFSET(T, FileName) +
-                                      nextFileDirInfo->FileNameLength;
-                        nextFileDirInfo =
-                            (T*)((PUCHAR)nextFileDirInfo +
-                                 nextFileDirInfo->NextEntryOffset);
-                    }
-
-                    moveLength += FIELD_OFFSET(T, FileName) +
-                                  nextFileDirInfo->FileNameLength;
-
-                    RtlMoveMemory(fileDirInfo,
-                                  (PUCHAR)fileDirInfo +
-                                      fileDirInfo->NextEntryOffset,
-                                  moveLength);
-                    moveLastFileDirInfo = false;
-                }
-                else // This is the first and last entry, so there's nothing to
-                     // return
-                {
-                    FltReleaseContext(context);
-                    Data->IoStatus.Status = STATUS_NO_MORE_ENTRIES;
-                    return;
-                }
+                moveLastFileDirInfo = true;
+            }
+            fileDirInfo = (T*)((PUCHAR)fileDirInfo + fileDirInfo->NextEntryOffset);
+            if (lastFileDirInfo == fileDirInfo)
+            {
+                break;
             }
         }
-
-        if (moveLastFileDirInfo)
-        {
-            lastFileDirInfo = fileDirInfo;
-        }
-        else
-        {
-            moveLastFileDirInfo = true;
-        }
-        fileDirInfo = (T*)((PUCHAR)fileDirInfo + fileDirInfo->NextEntryOffset);
-        if (lastFileDirInfo == fileDirInfo)
-        {
-            break;
-        }
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        status = GetExceptionCode();
+        KdPrint(("An exception occurred at " __FUNCTION__ " status = (0x%08X)\n", status));
     }
     FltReleaseContext(context);
 }
