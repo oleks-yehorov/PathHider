@@ -119,7 +119,7 @@ bool ShouldHandleRequest(PFLT_CALLBACK_DATA Data,
 template <class T> 
 bool AddressIsValid(const void* ValidBufferStart, const void* ValidBufferEnd, T* AddressToCheck) 
 {    
-    return retVal = (reinterpret_cast<const void*>(AddressToCheck) >= ValidBufferStart &&
+    return (reinterpret_cast<const void*>(AddressToCheck) >= ValidBufferStart &&
                    reinterpret_cast<const void*>(AddressToCheck) <= reinterpret_cast<const char*>(ValidBufferEnd) - sizeof(T));
 }
 
