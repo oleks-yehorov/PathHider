@@ -132,9 +132,25 @@ void HideFiles(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects)
     ULONG moveLength;
     T* lastFileDirInfo = nullptr;
     bool moveLastFileDirInfo = true;
-    fileDirInfo = (T*)Data->Iopb->Parameters.DirectoryControl.QueryDirectory
-                      .DirectoryBuffer;
-    const void* ValidBufferStart = Data->Iopb->Parameters.DirectoryControl.QueryDirectory.DirectoryBuffer;
+    if (Data->Iopb->Parameters.DirectoryControl.QueryDirectory.Length <= 0)
+    {
+        KdPrint(("Buffer size is <= 0 \n"));
+        return;
+    }
+    if (Data->Iopb->Parameters.DirectoryControl.QueryDirectory.MdlAddress != NULL)
+    {
+        fileDirInfo = static_cast<T*>(MmGetSystemAddressForMdlSafe(Data->Iopb->Parameters.DirectoryControl.QueryDirectory.MdlAddress, NormalPagePriority));
+    }
+    else
+    {
+        fileDirInfo = static_cast<T*>(Data->Iopb->Parameters.DirectoryControl.QueryDirectory.DirectoryBuffer);
+    }
+    if (!fileDirInfo)
+    {
+        KdPrint(("Null buffer \n"));
+        return;
+    }
+    const void* ValidBufferStart = fileDirInfo;
     const void* ValidBufferEnd = reinterpret_cast<const char*>(ValidBufferStart) + Data->Iopb->Parameters.DirectoryControl.QueryDirectory.Length;
     
     FolderContext* context = nullptr;
