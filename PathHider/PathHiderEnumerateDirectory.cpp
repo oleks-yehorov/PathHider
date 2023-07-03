@@ -161,87 +161,134 @@ void HideFiles(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects)
         KdPrint(("Failed to get file context (0x%08X)\n", status));
         return;
     }
-    __try
+    BOOLEAN singleEntry = BooleanFlagOn(Data->Iopb->OperationFlags, SL_RETURN_SINGLE_ENTRY);
+    if (singleEntry)
     {
-        //Never Trust Buffers
-        ProbeForWrite(fileDirInfo, Data->Iopb->Parameters.DirectoryControl.QueryDirectory.Length, 1);
-        for (;;)
+        __try
         {
+            ProbeForWrite(fileDirInfo, Data->Iopb->Parameters.DirectoryControl.QueryDirectory.Length, 1);
             if (!AddressIsValid<T>(ValidBufferStart, ValidBufferEnd, fileDirInfo))
                 __leave;
             fileName.Buffer = fileDirInfo->FileName;
             fileName.Length = (USHORT)fileDirInfo->FileNameLength;
             fileName.MaximumLength = fileName.Length;
-
-            if (FileObjectToHide(Data, &fileName,
-                                 context->m_fileListHead)) // Skip this entry
+            while (FileObjectToHide(Data, &fileName,
+                                    context->m_fileListHead)) // Skip this entry
             {
-                if (lastFileDirInfo != NULL) // This is not the first entry
+                ULONG retLength;
+
+                status = FltQueryDirectoryFile(FltObjects->Instance, FltObjects->FileObject, fileDirInfo,
+                                               Data->Iopb->Parameters.DirectoryControl.QueryDirectory.Length,
+                                               Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileInformationClass, 
+                                               TRUE, 
+                                               Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName, 
+                                               FALSE, 
+                                               &retLength);
+                FltIsCallbackDataDirty(Data);
+                if (!NT_SUCCESS(status))
                 {
-                    // Just point the last info's offset to the next info
-                    if (fileDirInfo->NextEntryOffset != 0)
+                    Data->IoStatus.Status = status;
+                    break;
+                }
+
+                fileName.Buffer = fileDirInfo->FileName;
+                fileName.Length = (USHORT)fileDirInfo->FileNameLength;
+                fileName.MaximumLength = fileName.Length;
+            }
+
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER)
+        {
+            status = GetExceptionCode();
+            KdPrint(("An exception occurred at " __FUNCTION__ " status = (0x%08X)\n", status));
+        }
+    }
+    else
+    {
+        __try
+        {
+            // Never Trust Buffers
+            ProbeForWrite(fileDirInfo, Data->Iopb->Parameters.DirectoryControl.QueryDirectory.Length, 1);
+            for (;;)
+            {
+                if (!AddressIsValid<T>(ValidBufferStart, ValidBufferEnd, fileDirInfo))
+                    __leave;
+                fileName.Buffer = fileDirInfo->FileName;
+                fileName.Length = (USHORT)fileDirInfo->FileNameLength;
+                fileName.MaximumLength = fileName.Length;
+
+                if (FileObjectToHide(Data, &fileName,
+                                     context->m_fileListHead)) // Skip this entry
+                {
+                    if (lastFileDirInfo != NULL) // This is not the first entry
                     {
-                        lastFileDirInfo->NextEntryOffset += fileDirInfo->NextEntryOffset;
-                        moveLastFileDirInfo = false;
+                        // Just point the last info's offset to the next info
+                        if (fileDirInfo->NextEntryOffset != 0)
+                        {
+                            lastFileDirInfo->NextEntryOffset += fileDirInfo->NextEntryOffset;
+                            moveLastFileDirInfo = false;
+                        }
+                        else // This is the last entry
+                        {
+                            lastFileDirInfo->NextEntryOffset = 0;
+                        }
                     }
-                    else // This is the last entry
+                    else
                     {
-                        lastFileDirInfo->NextEntryOffset = 0;
+                        if (fileDirInfo->NextEntryOffset != 0) // This is the first
+                                                               // entry
+                        {
+                            nextFileDirInfo = (T*)((PUCHAR)fileDirInfo + fileDirInfo->NextEntryOffset);
+                            if (!AddressIsValid<T>(ValidBufferStart, ValidBufferEnd, nextFileDirInfo))
+                                __leave;
+                            moveLength = 0;
+                            while (nextFileDirInfo->NextEntryOffset != 0)
+                            {
+                                moveLength += FIELD_OFFSET(T, FileName) + nextFileDirInfo->FileNameLength;
+                                nextFileDirInfo = (T*)((PUCHAR)nextFileDirInfo + nextFileDirInfo->NextEntryOffset);
+                                if (!AddressIsValid<T>(ValidBufferStart, ValidBufferEnd, nextFileDirInfo))
+                                    __leave;
+                            }
+
+                            moveLength += FIELD_OFFSET(T, FileName) + nextFileDirInfo->FileNameLength;
+
+                            RtlMoveMemory(fileDirInfo, (PUCHAR)fileDirInfo + fileDirInfo->NextEntryOffset, moveLength);
+                            moveLastFileDirInfo = false;
+                        }
+                        else // This is the first and last entry, so there's nothing to
+                             // return
+                        {
+                            FltReleaseContext(context);
+                            Data->IoStatus.Status = STATUS_NO_MORE_ENTRIES;
+                            return;
+                        }
                     }
+                }
+
+                if (moveLastFileDirInfo)
+                {
+                    lastFileDirInfo = fileDirInfo;
                 }
                 else
                 {
-                    if (fileDirInfo->NextEntryOffset != 0) // This is the first
-                                                           // entry
-                    {
-                        nextFileDirInfo = (T*)((PUCHAR)fileDirInfo + fileDirInfo->NextEntryOffset);
-                        if (!AddressIsValid<T>(ValidBufferStart, ValidBufferEnd, nextFileDirInfo))
-                            __leave;
-                        moveLength = 0;
-                        while (nextFileDirInfo->NextEntryOffset != 0)
-                        {
-                            moveLength += FIELD_OFFSET(T, FileName) + nextFileDirInfo->FileNameLength;
-                            nextFileDirInfo = (T*)((PUCHAR)nextFileDirInfo + nextFileDirInfo->NextEntryOffset);
-                            if (!AddressIsValid<T>(ValidBufferStart, ValidBufferEnd, nextFileDirInfo))
-                                __leave;
-                        }
-
-                        moveLength += FIELD_OFFSET(T, FileName) + nextFileDirInfo->FileNameLength;
-
-                        RtlMoveMemory(fileDirInfo, (PUCHAR)fileDirInfo + fileDirInfo->NextEntryOffset, moveLength);
-                        moveLastFileDirInfo = false;
-                    }
-                    else // This is the first and last entry, so there's nothing to
-                         // return
-                    {
-                        FltReleaseContext(context);
-                        Data->IoStatus.Status = STATUS_NO_MORE_ENTRIES;
-                        return;
-                    }
+                    moveLastFileDirInfo = true;
+                }
+                fileDirInfo = (T*)((PUCHAR)fileDirInfo + fileDirInfo->NextEntryOffset);
+                if (lastFileDirInfo == fileDirInfo)
+                {
+                    break;
                 }
             }
-
-            if (moveLastFileDirInfo)
-            {
-                lastFileDirInfo = fileDirInfo;
-            }
-            else
-            {
-                moveLastFileDirInfo = true;
-            }
-            fileDirInfo = (T*)((PUCHAR)fileDirInfo + fileDirInfo->NextEntryOffset);
-            if (lastFileDirInfo == fileDirInfo)
-            {
-                break;
-            }
         }
+        __except (EXCEPTION_EXECUTE_HANDLER)
+        {
+            status = GetExceptionCode();
+            KdPrint(("An exception occurred at " __FUNCTION__ " status = (0x%08X)\n", status));
+        }
+
     }
-    __except (EXCEPTION_EXECUTE_HANDLER)
-    {
-        status = GetExceptionCode();
-        KdPrint(("An exception occurred at " __FUNCTION__ " status = (0x%08X)\n", status));
-    }
-    FltReleaseContext(context);
+    if (context)
+        FltReleaseContext(context);
 }
 
 void ProcessFileInfoQuery(PFLT_CALLBACK_DATA Data,
@@ -306,6 +353,5 @@ PathHiderPostDirectoryControl(_Inout_ PFLT_CALLBACK_DATA Data,
     {
         ProcessFileInfoQuery(Data, FltObjects);
     }
-
     return FLT_POSTOP_FINISHED_PROCESSING;
 }

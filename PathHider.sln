@@ -7,22 +7,44 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PathHider", "PathHider\Path
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PathHiderConfig", "PathHiderConfig\PathHiderConfig.vcxproj", "{065F07B4-D075-4969-B75D-6C39B7660328}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PathHiderAutoTest", "PathHiderAutoTest\PathHiderAutoTest.vcxproj", "{27ED65D3-A22D-43FF-A0C5-F299953533CF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
 		Release|x64 = Release|x64
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{2AC0C284-1644-47B6-91BF-084830FC1E04}.Debug|x64.ActiveCfg = Debug|x64
 		{2AC0C284-1644-47B6-91BF-084830FC1E04}.Debug|x64.Build.0 = Debug|x64
 		{2AC0C284-1644-47B6-91BF-084830FC1E04}.Debug|x64.Deploy.0 = Debug|x64
+		{2AC0C284-1644-47B6-91BF-084830FC1E04}.Debug|x86.ActiveCfg = Debug|Win32
+		{2AC0C284-1644-47B6-91BF-084830FC1E04}.Debug|x86.Build.0 = Debug|Win32
+		{2AC0C284-1644-47B6-91BF-084830FC1E04}.Debug|x86.Deploy.0 = Debug|Win32
 		{2AC0C284-1644-47B6-91BF-084830FC1E04}.Release|x64.ActiveCfg = Release|x64
 		{2AC0C284-1644-47B6-91BF-084830FC1E04}.Release|x64.Build.0 = Release|x64
 		{2AC0C284-1644-47B6-91BF-084830FC1E04}.Release|x64.Deploy.0 = Release|x64
+		{2AC0C284-1644-47B6-91BF-084830FC1E04}.Release|x86.ActiveCfg = Release|Win32
+		{2AC0C284-1644-47B6-91BF-084830FC1E04}.Release|x86.Build.0 = Release|Win32
+		{2AC0C284-1644-47B6-91BF-084830FC1E04}.Release|x86.Deploy.0 = Release|Win32
 		{065F07B4-D075-4969-B75D-6C39B7660328}.Debug|x64.ActiveCfg = Debug|x64
 		{065F07B4-D075-4969-B75D-6C39B7660328}.Debug|x64.Build.0 = Debug|x64
+		{065F07B4-D075-4969-B75D-6C39B7660328}.Debug|x86.ActiveCfg = Debug|Win32
+		{065F07B4-D075-4969-B75D-6C39B7660328}.Debug|x86.Build.0 = Debug|Win32
 		{065F07B4-D075-4969-B75D-6C39B7660328}.Release|x64.ActiveCfg = Release|x64
 		{065F07B4-D075-4969-B75D-6C39B7660328}.Release|x64.Build.0 = Release|x64
+		{065F07B4-D075-4969-B75D-6C39B7660328}.Release|x86.ActiveCfg = Release|Win32
+		{065F07B4-D075-4969-B75D-6C39B7660328}.Release|x86.Build.0 = Release|Win32
+		{27ED65D3-A22D-43FF-A0C5-F299953533CF}.Debug|x64.ActiveCfg = Debug|x64
+		{27ED65D3-A22D-43FF-A0C5-F299953533CF}.Debug|x64.Build.0 = Debug|x64
+		{27ED65D3-A22D-43FF-A0C5-F299953533CF}.Debug|x86.ActiveCfg = Debug|Win32
+		{27ED65D3-A22D-43FF-A0C5-F299953533CF}.Debug|x86.Build.0 = Debug|Win32
+		{27ED65D3-A22D-43FF-A0C5-F299953533CF}.Release|x64.ActiveCfg = Release|x64
+		{27ED65D3-A22D-43FF-A0C5-F299953533CF}.Release|x64.Build.0 = Release|x64
+		{27ED65D3-A22D-43FF-A0C5-F299953533CF}.Release|x86.ActiveCfg = Release|Win32
+		{27ED65D3-A22D-43FF-A0C5-F299953533CF}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
